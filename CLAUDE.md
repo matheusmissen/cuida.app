@@ -27,6 +27,10 @@ O primeiro usuário real é uma idosa que mora sozinha e trata leucemia. O objet
 - Voz: transcrição no aparelho (reconhecimento de fala do sistema; na web, Web Speech API) e resposta falada com expo-speech. O agente roda na Edge Function `agente`; não há serviço de transcrição no servidor.
 - LLM com tool calling para o agente. Chaves de API só em variáveis de ambiente do servidor, nunca no app.
 
+## Design
+
+Visual aprovado: "Manhã Clara". Siga `docs/design/README.md` e `docs/design/tokens.json`; as telas de referência estão em `docs/design/telas/` (HTML só para consulta, não importar nos apps).
+
 ## Regras de interface do app do idoso
 
 - Interface em português do Brasil. Letra mínima de 20 pt, alto contraste, botões de no mínimo 64 px.
@@ -121,6 +125,8 @@ Pronto e testado:
 - `apps/idoso`: login anônimo + vínculo por código/QR, tela única, alarme em tela cheia com "Tomei" e voz (expo-speech), alarmes locais no celular; na web o alarme é um modal.
 - `apps/idoso` (22–25/11): botão "Falar com a Lia"; transcrição no aparelho (expo-speech-recognition, prefere on-device; na web, Web Speech API; sem reconhecimento, campo de texto grande); chama a Edge Function `agente` com `{ texto, historico }` (últimas 12 falas) e mostra/fala a resposta. Lógica pura em `packages/cliente/src/conversa.ts`, com testes.
 - `npm test` roda todos os testes; `npm run typecheck` checa os dois apps.
+
+Próximo trabalho de interface: aplicar o design de `docs/design/` nos dois apps (temas a partir de `tokens.json`, fontes Atkinson Hyperlegible e Outfit, telas conforme `docs/design/telas/`).
 
 Falta de 22–25/11: check-in diário iniciado pela Lia no horário configurado (e a regra "check-in sem resposta após 2 tentativas em 1 h", `avaliarCheckinSemResposta`); destaque visual do alerta vermelho no `apps/familia`. Depois: teste ponta a ponta no Supabase hospedado (ainda não feito), botão "Preciso de ajuda" no app do idoso e publicação web (26–27/11).
 
