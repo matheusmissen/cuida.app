@@ -3,11 +3,12 @@ import { useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Alarme } from '@/components/alarme';
+import { FalarComLia } from '@/components/falar-com-lia';
 import { VincularAparelho } from '@/components/vincular-aparelho';
 import { useAparelho } from '@/lib/aparelho';
 import { tema } from '@/lib/tema';
 import { useDoses } from '@/lib/use-doses';
-import { falar, NOME_ASSISTENTE, useUltimaFala } from '@/lib/voz';
+import { falar, NOME_ASSISTENTE } from '@/lib/voz';
 
 export default function Inicio() {
   const { carregando, paciente, erro } = useAparelho();
@@ -38,7 +39,6 @@ export default function Inicio() {
 
 function TelaDoDia({ pacienteId, apelido }: { pacienteId: string; apelido: string }) {
   const { doses, agora, confirmar } = useDoses(pacienteId);
-  const ultimaFala = useUltimaFala();
   // Na web o navegador só deixa falar depois de um toque: um botão "Começar" na abertura.
   const [iniciado, setIniciado] = useState(Platform.OS !== 'web');
 
@@ -60,7 +60,7 @@ function TelaDoDia({ pacienteId, apelido }: { pacienteId: string; apelido: strin
           style={estilos.comecar}
           onPress={() => {
             setIniciado(true);
-            falar(`${saudacao(agora)}, ${apelido}! Eu sou a ${NOME_ASSISTENTE}. Vou te lembrar dos remédios.`);
+            falar(`${saudacao(agora)}, ${apelido}! Eu sou a ${NOME_ASSISTENTE}. Quando quiser conversar, aperte o botão azul.`);
           }}
         >
           <Text style={estilos.textoComecar}>Começar</Text>
@@ -76,12 +76,7 @@ function TelaDoDia({ pacienteId, apelido }: { pacienteId: string; apelido: strin
           {saudacao(agora)}, {apelido}!
         </Text>
 
-        {ultimaFala && (
-          <View style={estilos.fala} accessibilityLiveRegion="polite">
-            <Text style={estilos.nomeLia}>{NOME_ASSISTENTE}</Text>
-            <Text style={estilos.textoFala}>{ultimaFala}</Text>
-          </View>
-        )}
+        <FalarComLia />
 
         <View style={estilos.cartao}>
           {proxima ? (
@@ -122,9 +117,6 @@ const estilos = StyleSheet.create({
   rotulo: { fontSize: tema.letra.minima, fontWeight: '700', color: tema.suave },
   grande: { fontSize: tema.letra.media, fontWeight: '800', color: tema.texto },
   texto: { fontSize: tema.letra.minima, color: tema.texto, lineHeight: 32 },
-  fala: { backgroundColor: '#E8EEFF', borderRadius: 20, padding: 20, gap: 4 },
-  nomeLia: { fontSize: tema.letra.minima, fontWeight: '800', color: tema.primaria },
-  textoFala: { fontSize: tema.letra.media, color: tema.texto, lineHeight: 38 },
   comecar: {
     minHeight: 120,
     minWidth: 280,

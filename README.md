@@ -112,6 +112,15 @@ Publicar: `supabase functions deploy agente`.
 
 > Primeiro deploy: as Edge Functions importam `packages/regras` de fora de `supabase/functions`. Confirme que a CLI empacota esses arquivos. Se não empacotar, copie `packages/regras/src` para `supabase/functions/_shared/regras` e troque os imports.
 
+## Conversa com a Lia (etapa 22–25/11, app do idoso)
+
+1. O idoso aperta **Falar com a Lia** e fala. A transcrição acontece no aparelho
+   (`expo-speech-recognition`, que usa o reconhecimento on-device quando o sistema oferece) ou, na web,
+   pela Web Speech API do navegador. Sem reconhecimento (por exemplo, Firefox), aparece um campo de texto grande.
+2. O texto e as últimas 12 falas vão para a Edge Function `agente` (`{ texto, historico }`), com o token do aparelho.
+3. A resposta aparece em letra grande e é falada com `expo-speech`. Se o agente não responder, a Lia avisa
+   em voz que não conseguiu e pede para tentar de novo.
+
 ## Regras de alerta
 
 | Nível | Exemplos | Quem é avisado |
