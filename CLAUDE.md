@@ -117,6 +117,7 @@ Pronto e testado:
 - `supabase/functions/verificar-doses`: realarme (30 min), alerta de dose perdida (60 min), escala laranja e push. Lógica pura em `_shared/` com testes em Node (`npm test`). `_shared/alertar.ts` (`criarEAvisar`) deve ser reutilizado pelas próximas funções.
 - `apps/familia`: login por e-mail, cadastro do paciente com consentimento, remédios/horários, QR de vínculo, painel do dia com alertas em tempo real.
 - `apps/idoso`: login anônimo + vínculo por código/QR, tela única, alarme em tela cheia com "Tomei" e voz (expo-speech), alarmes locais no celular; na web o alarme é um modal.
+- `apps/idoso` (22–25/11): botão "Falar com a Lia"; transcrição no aparelho (expo-speech-recognition, prefere on-device; na web, Web Speech API; sem reconhecimento, campo de texto grande); chama a Edge Function `agente` com `{ texto, historico }` (últimas 12 falas) e mostra/fala a resposta. Lógica pura em `packages/cliente/src/conversa.ts`, com testes.
 - `npm test` roda todos os testes; `npm run typecheck` checa os dois apps.
 
 Próximo passo (22–25/11): check-in por voz, Edge Function `agente`, regras de check-in chamando `avaliarCheckin` e `criarEAvisar`.

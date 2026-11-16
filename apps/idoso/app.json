@@ -49,6 +49,13 @@
           "cameraPermission": "O Cuida usa a câmera só para ler o código da sua família.",
           "recordAudioAndroid": false
         }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "O Cuida usa o microfone para você conversar com a Lia.",
+          "speechRecognitionPermission": "O Cuida transcreve a sua fala para a Lia entender o que você disse."
+        }
       ]
     ],
     "experiments": {

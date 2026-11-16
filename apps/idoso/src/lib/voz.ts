@@ -15,6 +15,11 @@ export function falar(texto: string): void {
   Speech.speak(texto, { language: 'pt-BR', rate: 0.9 });
 }
 
+/** Cala a Lia (antes de ouvir o microfone, para ela não ouvir a si mesma). */
+export function pararFala(): void {
+  Speech.stop();
+}
+
 export function useUltimaFala(): string | null {
   return useSyncExternalStore(
     (ouvinte) => {

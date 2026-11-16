@@ -91,6 +91,15 @@ Ligue também o login anônimo (Authentication → Sign In / Providers → Anony
    alerta laranja (vermelho se o remédio for crítico) e manda push. Laranja sem resposta em 30 min vai
    para o próximo da escala.
 
+## Conversa com a Lia (etapa 22–25/11, app do idoso)
+
+1. O idoso aperta **Falar com a Lia** e fala. A transcrição acontece no aparelho
+   (`expo-speech-recognition`, que usa o reconhecimento on-device quando o sistema oferece) ou, na web,
+   pela Web Speech API do navegador. Sem reconhecimento (por exemplo, Firefox), aparece um campo de texto grande.
+2. O texto e as últimas 12 falas vão para a Edge Function `agente` (`{ texto, historico }`), com o token do aparelho.
+3. A resposta aparece em letra grande e é falada com `expo-speech`. Se o agente não responder, a Lia avisa
+   em voz que não conseguiu e pede para tentar de novo.
+
 ## Regras de alerta
 
 | Nível | Exemplos | Quem é avisado |
