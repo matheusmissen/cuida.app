@@ -1,0 +1,19 @@
+{
+  "name": "@cuida/cliente",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cliente Supabase, tipos das tabelas e utilitários compartilhados pelos apps do Cuida.",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "node --experimental-strip-types --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@cuida/regras": "*"
+  },
+  "peerDependencies": {
+    "@react-native-async-storage/async-storage": "*",
+    "@supabase/supabase-js": "^2",
+    "react-native": "*"
+  }
+}

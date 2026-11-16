@@ -8,9 +8,15 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "npm run test --workspace=@cuida/regras"
+    "test": "npm run test:pacotes && npm run test:funcoes",
+    "test:pacotes": "npm run test --workspace=@cuida/regras --workspace=@cuida/cliente",
+    "test:funcoes": "node --experimental-strip-types --test supabase/functions/_shared/*.test.ts",
+    "typecheck": "npm run typecheck --workspace=@cuida/idoso --workspace=@cuida/familia",
+    "idoso": "npm run web --workspace=@cuida/idoso",
+    "familia": "npm run web --workspace=@cuida/familia"
   },
   "engines": {
     "node": ">=22.6"
-  }
+  },
+  "type": "module"
 }

@@ -40,7 +40,9 @@ select public.vincular_aparelho(:'codigo');
 set request.jwt.claim.sub = '33333333-3333-4333-8333-333333333333';
 insert into public.checkins (paciente_id, febre, temperatura) values ('00000000-0000-4000-8000-000000000001', true, 38.2);
 select count(*) as checkins_agora from public.checkins;
-update public.doses set confirmado_em = now(), status = 'tomado' where status = 'pendente' and previsto_em = (select min(previsto_em) from public.doses where status='pendente');
+select public.confirmar_dose((select id from public.doses where status='pendente' order by previsto_em limit 1)) is not null as confirmou;
+-- update direto em doses não é mais permitido (confirmação só por confirmar_dose): deve mostrar UPDATE 0
+update public.doses set previsto_em = now() where status = 'pendente';
 select count(*) filter (where status='tomado') as doses_tomadas from public.doses;
 select count(*) as remedios_visiveis from public.remedios;
 update public.remedios set dose = '5 comprimidos';

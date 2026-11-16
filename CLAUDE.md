@@ -108,14 +108,20 @@ Se apertar, cortar primeiro o alerta por silêncio de 24 h e o painel do dia com
 - **README** com: problema, como rodar, link da demo, link do vídeo, arquitetura e como testar as regras de alerta.
 - Repositório público pelo menos até 15/12/2026.
 
-## Estado atual (16/11)
+## Estado atual (18–21/11 concluída)
 
 Pronto e testado:
-- `packages/regras`: motor de regras de alerta em TypeScript puro, sem dependências, com 27 testes (`npm test`). Use estas funções nas Edge Functions; não reimplemente as regras.
-- `supabase/migrations`: esquema completo com RLS, funções `criar_paciente`, `gerar_codigo_vinculo`, `vincular_aparelho` e `registrar_interacao`. Validado em Postgres 16 com o teste de `supabase/tests/rls_manual.sql`.
-- `supabase/seed.sql`: paciente fictícia "Dona Maria" com remédios, doses, check-ins e um alerta.
+- `packages/regras`: motor de regras de alerta em TypeScript puro, sem dependências, com 27 testes. Use estas funções nas Edge Functions; não reimplemente as regras.
+- `packages/cliente`: cliente Supabase (só chave anon), tipos das tabelas e utilitários de doses (usam `avaliarDose`), com testes.
+- `supabase/migrations`: esquema com RLS; `criar_paciente`, `gerar_codigo_vinculo`, `vincular_aparelho`, `registrar_interacao`, `gerar_doses_dia`, `gerar_doses_hoje`, `confirmar_dose`; realtime de alertas/doses; pg_cron (URL e chave no Vault). Validado em Postgres 16 com `supabase/tests/rls_manual.sql` e `doses_manual.sql`.
+- `supabase/functions/verificar-doses`: realarme (30 min), alerta de dose perdida (60 min), escala laranja e push. Lógica pura em `_shared/` com testes em Node (`npm test`). `_shared/alertar.ts` (`criarEAvisar`) deve ser reutilizado pelas próximas funções.
+- `apps/familia`: login por e-mail, cadastro do paciente com consentimento, remédios/horários, QR de vínculo, painel do dia com alertas em tempo real.
+- `apps/idoso`: login anônimo + vínculo por código/QR, tela única, alarme em tela cheia com "Tomei" e voz (expo-speech), alarmes locais no celular; na web o alarme é um modal.
+- `npm test` roda todos os testes; `npm run typecheck` checa os dois apps.
 
-Próximo passo: criar `apps/idoso` e `apps/familia` com `npx create-expo-app@latest` (template com Expo Router e TypeScript), adicionar suporte a web e o cliente Supabase, e implementar a etapa de 18–21/11.
+Próximo passo (22–25/11): check-in por voz, Edge Function `agente`, regras de check-in chamando `avaliarCheckin` e `criarEAvisar`.
+
+Observações: `npx expo install` precisa de `EXPO_OFFLINE=1` neste ambiente (api.expo.dev bloqueado). O push da família exige `eas init` (projectId).
 
 Os campos de `checkins` vão além da tabela resumida acima: incluem também calafrio, sinais_infeccao, apetite_baixo, nausea, queda, dor_no_peito, falta_de_ar e confuso. A migration é a fonte da verdade.
 

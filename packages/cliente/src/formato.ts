@@ -1,0 +1,41 @@
+// Formatação em português do Brasil.
+import type { Nivel } from '@cuida/regras';
+
+export const FUSO = 'America/Sao_Paulo';
+
+/** '08:00' a partir de um instante ISO, no horário de Brasília. */
+export function horaCurta(iso: string): string {
+  return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: FUSO }).format(
+    new Date(iso),
+  );
+}
+
+/** '08:00' a partir de um campo time do Postgres ('08:00:00'). */
+export function horaDoBanco(hora: string): string {
+  return hora.slice(0, 5);
+}
+
+/** Lê '8', '8h', '08:00', '8:30' e devolve 'HH:MM', ou null se inválido. */
+export function lerHora(texto: string): string | null {
+  const m = texto.trim().toLowerCase().match(/^(\d{1,2})(?:[:h](\d{2})?)?h?$/);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = m[2] ? Number(m[2]) : 0;
+  if (h > 23 || min > 59) return null;
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+/** 'Bom dia', 'Boa tarde' ou 'Boa noite', no horário de Brasília. */
+export function saudacao(agora: Date): string {
+  const h = Number(new Intl.DateTimeFormat('pt-BR', { hour: 'numeric', hourCycle: 'h23', timeZone: FUSO }).format(agora));
+  if (h >= 5 && h < 12) return 'Bom dia';
+  if (h >= 12 && h < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+export const NIVEIS: Record<Nivel, { rotulo: string; cor: string; fundo: string }> = {
+  vermelho: { rotulo: 'Urgente', cor: '#B00020', fundo: '#FDE7EA' },
+  laranja: { rotulo: 'Atenção', cor: '#B45309', fundo: '#FEF0DC' },
+  amarelo: { rotulo: 'Acompanhar', cor: '#8A6D00', fundo: '#FFF8D6' },
+  informativo: { rotulo: 'Histórico', cor: '#475569', fundo: '#EEF2F6' },
+};
