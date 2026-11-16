@@ -32,10 +32,39 @@ async function preparar(): Promise<boolean> {
   return preparado;
 }
 
-/** Reagenda todos os alarmes a partir das doses não confirmadas. */
+type Tipo = 'dose' | 'checkin';
+
+/** Cancela só as notificações agendadas de um tipo (doses e check-in são reagendados separadamente). */
+async function cancelarTipo(tipo: Tipo): Promise<void> {
+  const agendadas = await Notifications.getAllScheduledNotificationsAsync();
+  await Promise.all(
+    agendadas
+      .filter((n) => (n.content.data?.tipo ?? 'dose') === tipo)
+      .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
+  );
+}
+
+/** Reagenda os lembretes do check-in diário (a Lia chama no horário e 30 min depois). */
+export async function agendarCheckin(instantes: Date[]): Promise<void> {
+  if (!(await preparar())) return;
+  await cancelarTipo('checkin');
+  for (const [i, quando] of instantes.entries()) {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'A Lia quer saber como você está',
+        body: i % 2 === 0 ? 'Abra o Cuida para conversar com a Lia.' : 'Ainda não conversamos hoje. Abra o Cuida.',
+        sound: 'default',
+        data: { tipo: 'checkin' },
+      },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: quando, channelId: 'alarmes' },
+    });
+  }
+}
+
+/** Reagenda todos os alarmes de remédio a partir das doses não confirmadas. */
 export async function agendarAlarmes(doses: DoseComRemedio[]): Promise<void> {
   if (!(await preparar())) return;
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  await cancelarTipo('dose');
   const agora = new Date();
   for (const dose of doses) {
     const remedio = dose.horarios.remedios;
@@ -46,7 +75,7 @@ export async function agendarAlarmes(doses: DoseComRemedio[]): Promise<void> {
           body: `${remedio.nome} — ${remedio.dose} (${horaCurta(dose.previsto_em)}). Abra e aperte "Tomei".`,
           sound: 'default',
           priority: Notifications.AndroidNotificationPriority.MAX,
-          data: { doseId: dose.id },
+          data: { tipo: 'dose', doseId: dose.id },
         },
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: quando, channelId: 'alarmes' },
       });

@@ -1,6 +1,7 @@
 // O aparelho do idoso entra anonimamente e se vincula ao paciente pelo código/QR da família.
-import type { Paciente } from '@cuida/cliente';
+import { SELECT_PACIENTE, type Paciente } from '@cuida/cliente';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { AppState } from 'react-native';
 import { supabase } from './supabase';
 
 interface EstadoAparelho {
@@ -20,7 +21,7 @@ const Contexto = createContext<EstadoAparelho>({
 async function buscarPaciente(usuarioId: string): Promise<Paciente | null> {
   const { data } = await supabase
     .from('pacientes')
-    .select('id, usuario_id, nome, apelido, condicoes, limite_febre, ultima_interacao_em')
+    .select(SELECT_PACIENTE)
     .eq('usuario_id', usuarioId)
     .maybeSingle();
   return (data as Paciente | null) ?? null;
@@ -47,6 +48,24 @@ export function AparelhoProvider({ children }: { children: ReactNode }) {
       setCarregando(false);
     })();
   }, []);
+
+  // A família pode mudar dados do paciente (por exemplo, o horário do check-in): relê de tempos em tempos.
+  const vinculado = Boolean(paciente);
+  useEffect(() => {
+    if (!vinculado) return;
+    const reler = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) return;
+      const atual = await buscarPaciente(data.session.user.id);
+      if (atual) setPaciente(atual);
+    };
+    const timer = setInterval(reler, 5 * 60_000);
+    const app = AppState.addEventListener('change', (e) => e === 'active' && reler());
+    return () => {
+      clearInterval(timer);
+      app.remove();
+    };
+  }, [vinculado]);
 
   const vincular = useCallback(async (codigo: string): Promise<string | null> => {
     const { error } = await supabase.rpc('vincular_aparelho', { p_codigo: codigo });

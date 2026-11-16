@@ -1,13 +1,31 @@
 // Botão grande "Falar com a Lia". Um toque começa a ouvir; outro toque termina
 // (ou a escuta termina sozinha quando a pessoa para de falar).
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { ConviteCheckin } from '@/lib/use-checkin';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useConversa } from '@/lib/use-conversa';
 import { tema } from '@/lib/tema';
 import { NOME_ASSISTENTE, useUltimaFala } from '@/lib/voz';
 
-export function FalarComLia() {
-  const { estado, podeOuvir, ouvindoAgora, disse, comecar, terminar, enviar } = useConversa();
+export function FalarComLia({
+  convite,
+  aoResponder,
+}: {
+  /** Check-in diário pendente: a Lia puxa a conversa uma vez por tentativa. */
+  convite?: ConviteCheckin | null;
+  aoResponder?: () => void;
+}) {
+  const { estado, podeOuvir, ouvindoAgora, disse, comecar, terminar, enviar, iniciarPelaLia } = useConversa({
+    aoResponder,
+  });
+  const chamadas = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (!convite || estado !== 'parada' || chamadas.current.has(convite.chave)) return;
+    chamadas.current.add(convite.chave);
+    iniciarPelaLia(convite.frase);
+  }, [convite, estado, iniciarPelaLia]);
+
   const [escrito, setEscrito] = useState('');
   // Toda resposta da Lia (conversa, alarme, avisos) aparece aqui em letra grande e também é falada.
   const ultimaFala = useUltimaFala();
@@ -36,13 +54,16 @@ export function FalarComLia() {
       {podeOuvir ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={ouvindo ? 'Terminar de falar' : `Falar com a ${NOME_ASSISTENTE}`}
+          accessibilityLabel={
+            ouvindo ? 'Terminar de falar' : convite ? `Responder à ${NOME_ASSISTENTE}` : `Falar com a ${NOME_ASSISTENTE}`
+          }
           accessibilityState={{ busy: pensando }}
           onPress={ouvindo ? terminar : comecar}
           disabled={pensando}
           style={({ pressed }) => [
             estilos.botao,
             ouvindo && estilos.botaoOuvindo,
+            !ouvindo && convite && estilos.botaoConvite,
             (pressed || pensando) && { opacity: 0.8 },
           ]}
         >
@@ -53,7 +74,11 @@ export function FalarComLia() {
             </>
           ) : (
             <Text style={estilos.textoBotao}>
-              {ouvindo ? '⏹  Terminei de falar' : `🎤  Falar com a ${NOME_ASSISTENTE}`}
+              {ouvindo
+                ? '⏹  Terminei de falar'
+                : convite
+                  ? `🎤  Responder à ${NOME_ASSISTENTE}`
+                  : `🎤  Falar com a ${NOME_ASSISTENTE}`}
             </Text>
           )}
         </Pressable>
@@ -106,6 +131,7 @@ const estilos = StyleSheet.create({
     borderWidth: 4,
     borderColor: '#002A78',
   },
+  botaoConvite: { borderColor: '#FFB800', borderWidth: 8 },
   botaoOuvindo: { backgroundColor: tema.perigo, borderColor: '#5C000F' },
   textoBotao: { fontSize: tema.letra.grande, fontWeight: '900', color: '#fff', textAlign: 'center' },
   campo: {

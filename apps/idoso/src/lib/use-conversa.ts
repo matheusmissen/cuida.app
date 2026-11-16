@@ -14,7 +14,9 @@ import { falar, pararFala } from './voz';
 
 export type EstadoConversa = 'parada' | 'ouvindo' | 'pensando';
 
-export function useConversa() {
+export function useConversa(opcoes: { aoResponder?: () => void } = {}) {
+  const aoResponder = useRef(opcoes.aoResponder);
+  aoResponder.current = opcoes.aoResponder;
   const [estado, setEstado] = useState<EstadoConversa>('parada');
   const [ouvindoAgora, setOuvindoAgora] = useState('');
   const [disse, setDisse] = useState<string | null>(null);
@@ -45,6 +47,14 @@ export function useConversa() {
       { papel: 'lia', texto: resposta.resposta },
     );
     falar(resposta.resposta);
+    aoResponder.current?.();
+  }, []);
+
+  /** A Lia puxa a conversa (check-in): fala e guarda a pergunta no histórico para o agente. */
+  const iniciarPelaLia = useCallback((frase: string) => {
+    historico.current = adicionarFala(historico.current, { papel: 'lia', texto: frase });
+    setDisse(null);
+    falar(frase);
   }, []);
 
   const comecar = useCallback(async () => {
@@ -75,5 +85,5 @@ export function useConversa() {
   /** Segundo toque no botão: termina de ouvir e envia o que foi dito. */
   const terminar = useCallback(() => encerrar.current?.(), []);
 
-  return { estado, podeOuvir, ouvindoAgora, disse, comecar, terminar, enviar };
+  return { estado, podeOuvir, ouvindoAgora, disse, comecar, terminar, enviar, iniciarPelaLia };
 }
