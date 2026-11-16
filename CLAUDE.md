@@ -108,7 +108,7 @@ Se apertar, cortar primeiro o alerta por silêncio de 24 h e o painel do dia com
 - **README** com: problema, como rodar, link da demo, link do vídeo, arquitetura e como testar as regras de alerta.
 - Repositório público pelo menos até 15/12/2026.
 
-## Estado atual (18–21/11 concluída)
+## Estado atual (16/11: etapas 18–21/11 concluída e 22–25/11 quase concluída)
 
 Pronto e testado:
 - `packages/regras`: motor de regras de alerta em TypeScript puro, sem dependências, com 27 testes. Use estas funções nas Edge Functions; não reimplemente as regras.
@@ -122,7 +122,7 @@ Pronto e testado:
 - `apps/idoso` (22–25/11): botão "Falar com a Lia"; transcrição no aparelho (expo-speech-recognition, prefere on-device; na web, Web Speech API; sem reconhecimento, campo de texto grande); chama a Edge Function `agente` com `{ texto, historico }` (últimas 12 falas) e mostra/fala a resposta. Lógica pura em `packages/cliente/src/conversa.ts`, com testes.
 - `npm test` roda todos os testes; `npm run typecheck` checa os dois apps.
 
-Próximo passo (22–25/11): lado do app do check-in por voz. No `apps/idoso`, um botão grande "Falar com a Lia": transcrever a fala no aparelho, chamar a Edge Function `agente` com o histórico da conversa, mostrar a resposta em letra grande e falar com expo-speech. Check-in diário iniciado pela Lia no horário configurado. No `apps/familia`, o alerta vermelho do check-in já chega pelo realtime de `alertas`; conferir o destaque visual.
+Falta de 22–25/11: check-in diário iniciado pela Lia no horário configurado (e a regra "check-in sem resposta após 2 tentativas em 1 h", `avaliarCheckinSemResposta`); destaque visual do alerta vermelho no `apps/familia`. Depois: teste ponta a ponta no Supabase hospedado (ainda não feito), botão "Preciso de ajuda" no app do idoso e publicação web (26–27/11).
 
 Observações: `npx expo install` precisa de `EXPO_OFFLINE=1` neste ambiente (api.expo.dev bloqueado). O push da família exige `eas init` (projectId).
 
