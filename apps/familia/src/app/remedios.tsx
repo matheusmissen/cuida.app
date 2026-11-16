@@ -1,10 +1,13 @@
 import { horaDoBanco, lerHora, type Horario, type Remedio } from '@cuida/cliente';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { BarraNavegacao, ESPACO_BARRA } from '@/components/navegacao';
 import { Opcao } from '@/components/cadastro-paciente';
-import { Botao, Campo, Cartao, cores, Erro, Selo, Texto, Titulo } from '@/components/ui';
+import { Botao, Campo, Cartao, cores, Erro, Selo, Texto, Titulo, TituloPagina } from '@/components/ui';
 import { usePaciente } from '@/lib/paciente';
 import { supabase } from '@/lib/supabase';
+import { fontes, paleta } from '@/lib/tema';
 
 type RemedioComHorarios = Remedio & { horarios: Horario[] };
 
@@ -53,7 +56,9 @@ export default function Remedios() {
   if (!paciente) return null;
 
   return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: cores.fundo }}>
     <ScrollView contentContainerStyle={estilos.conteudo} keyboardShouldPersistTaps="handled">
+      <TituloPagina style={{ paddingHorizontal: 4 }}>Remédios</TituloPagina>
       <NovoRemedio pacienteId={paciente.id} aoSalvar={carregar} />
       <Erro mensagem={erro} />
       {remedios.map((r) => (
@@ -63,7 +68,7 @@ export default function Remedios() {
               <Titulo>{r.nome}</Titulo>
               <Texto suave>{r.dose}</Texto>
             </View>
-            {r.critico && <Selo texto="Crítico" cor={cores.perigo} fundo="#FDE7EA" />}
+            {r.critico && <Selo texto="Crítico" cor={paleta.alerta.texto} fundo={paleta.alerta.fundo} />}
           </View>
           <Texto>
             {r.horarios
@@ -84,6 +89,8 @@ export default function Remedios() {
         </Cartao>
       ))}
     </ScrollView>
+    <BarraNavegacao ativa="remedios" />
+    </SafeAreaView>
   );
 }
 
@@ -159,7 +166,7 @@ function NovoRemedio({ pacienteId, aoSalvar }: { pacienteId: string; aoSalvar: (
                 onPress={() => setDias(marcado ? dias.filter((x) => x !== i) : [...dias, i].sort())}
                 style={[estilos.dia, marcado && estilos.diaMarcado]}
               >
-                <Text style={{ color: marcado ? '#fff' : cores.primaria, fontWeight: '700' }}>{d}</Text>
+                <Text style={{ color: marcado ? paleta.sobreTinta : cores.texto, fontFamily: fontes.textoNegrito }}>{d}</Text>
               </Pressable>
             );
           })}
@@ -176,8 +183,8 @@ function NovoRemedio({ pacienteId, aoSalvar }: { pacienteId: string; aoSalvar: (
 }
 
 const estilos = StyleSheet.create({
-  conteudo: { padding: 16, gap: 16, maxWidth: 640, width: '100%', alignSelf: 'center', paddingBottom: 48 },
-  rotulo: { fontSize: 14, fontWeight: '600', color: cores.suave },
+  conteudo: { padding: 20, paddingTop: 24, gap: 12, maxWidth: 640, width: '100%', alignSelf: 'center', paddingBottom: ESPACO_BARRA + 24 },
+  rotulo: { fontSize: 14, fontFamily: fontes.textoNegrito, color: cores.secundario },
   dia: {
     width: 40,
     height: 40,

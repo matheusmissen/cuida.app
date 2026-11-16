@@ -48,3 +48,15 @@ export const NIVEIS: Record<Nivel, { rotulo: string; cor: string; fundo: string 
   amarelo: { rotulo: 'Acompanhar', cor: '#8A6D00', fundo: '#FFF8D6' },
   informativo: { rotulo: 'Histórico', cor: '#475569', fundo: '#EEF2F6' },
 };
+
+/**
+ * Separa o motivo de um alerta em título curto e explicação, para a tela de alerta.
+ * 'Febre ou calafrio (38,2 °C). Em tratamento de leucemia, procurar o médico.' →
+ * { titulo: 'Febre ou calafrio (38,2 °C)', detalhe: 'Em tratamento de leucemia, procurar o médico.' }
+ */
+export function dividirMotivo(motivo: string): { titulo: string; detalhe: string | null } {
+  const texto = motivo.trim();
+  const i = texto.search(/\.\s+\S/);
+  if (i < 0) return { titulo: texto.replace(/\.$/, ''), detalhe: null };
+  return { titulo: texto.slice(0, i), detalhe: texto.slice(i + 1).trim() };
+}

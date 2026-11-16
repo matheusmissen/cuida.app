@@ -131,7 +131,8 @@ Pronto e testado:
 
 Próximo passo (26–27/11): teste ponta a ponta no Supabase hospedado (ainda não feito), botão "Preciso de ajuda" no app do idoso, publicação web na Vercel e paciente sintética completa no banco.
 
-Próximo trabalho de interface: aplicar o design de `docs/design/` nos dois apps (temas a partir de `tokens.json`, fontes Atkinson Hyperlegible e Outfit, telas conforme `docs/design/telas/`).
+- Design "Manhã Clara" aplicado nos dois apps: temas em `apps/*/src/lib/tema.ts` importam `docs/design/tokens.json` (não duplique cores); fontes Atkinson Hyperlegible e Outfit via `@expo-google-fonts` (carregadas no `_layout`); ícones de traço em `components/icones.tsx` (react-native-svg). Idoso: `Texto`/`Destaque` em `components/ui.tsx` garantem 20 pt; telas de início, conversa (`components/conversa.tsx`), alarme (tela cheia no celular, modal na web) e "Sua família foi avisada" (aparece quando o agente registra pedido de ajuda). Família: painel do dia com cartão vermelho, tela do alerta, barra de navegação flutuante (Hoje, Remédios, Alertas, Ajustes) e tela Ajustes (horário do check-in, vincular, sair). `packages/cliente/test/design.test.ts` confere 20 pt, toques de 64 e contraste 4,5:1 dos tokens.
+- Ainda sem dados para partes das referências: nomes e telefones do círculo no idoso ("Ligar para o Lucas"), "Quem foi avisado" por pessoa e botões de ligar no alerta da família. O botão "Preciso de ajuda" entra com a etapa 26–27/11.
 
 Observações: `npx expo install` precisa de `EXPO_OFFLINE=1` neste ambiente (api.expo.dev bloqueado). O push da família exige `eas init` (projectId).
 

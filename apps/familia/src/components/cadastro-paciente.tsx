@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Botao, Campo, Cartao, cores, Erro, Texto, Titulo } from '@/components/ui';
 import { usePaciente } from '@/lib/paciente';
 import { supabase } from '@/lib/supabase';
+import { fontes, paleta } from '@/lib/tema';
 
 export function CadastroPaciente() {
   const { recarregar } = usePaciente();
@@ -66,7 +67,7 @@ export function Opcao({ marcada, onPress, children }: { marcada: boolean; onPres
       style={estilos.opcao}
     >
       <View style={[estilos.caixa, marcada && estilos.caixaMarcada]}>
-        {marcada && <Text style={{ color: '#fff', fontWeight: '800' }}>✓</Text>}
+        {marcada && <Text style={{ color: paleta.sobreTinta, fontFamily: fontes.textoNegrito }}>✓</Text>}
       </View>
       <Text style={estilos.textoOpcao}>{children}</Text>
     </Pressable>
@@ -86,5 +87,5 @@ const estilos = StyleSheet.create({
     marginTop: 1,
   },
   caixaMarcada: { backgroundColor: cores.primaria },
-  textoOpcao: { flex: 1, fontSize: 15, color: cores.texto, lineHeight: 21 },
+  textoOpcao: { flex: 1, fontSize: 15, fontFamily: fontes.texto, color: cores.texto, lineHeight: 21 },
 });

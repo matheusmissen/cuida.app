@@ -1,34 +1,80 @@
-// Check-in diário no painel da família: horário em que a Lia chama, situação de hoje
-// (mesma conta do servidor) e o que chamou atenção no último check-in.
-import {
-  horaCurta,
-  horaDoBanco,
-  lerHora,
-  resumoDoCheckin,
-  type CheckinLinha,
-} from '@cuida/cliente';
+// Check-in diário na família: o cartão do painel ("Último check-in") e o ajuste de horário.
+// A situação de hoje usa situacaoDoCheckin (packages/regras), a mesma conta do servidor.
+import { horaCurta, horaDoBanco, lerHora, resumoDoCheckin, type CheckinLinha } from '@cuida/cliente';
 import { situacaoDoCheckin, tentativasDoCheckin } from '@cuida/regras';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
-import { Botao, Campo, Cartao, cores, Erro, Selo, Texto, Titulo } from '@/components/ui';
+import { View } from 'react-native';
+import { Botao, Campo, Cartao, Erro, Selo, Texto, Titulo } from '@/components/ui';
 import { usePaciente } from '@/lib/paciente';
 import { supabase } from '@/lib/supabase';
+import { paleta } from '@/lib/tema';
 
-export function CheckinDiario({ ultimo, agora }: { ultimo: CheckinLinha | null; agora: Date }) {
+function statusDeHoje(horario: string | null, ultimo: CheckinLinha | null, agora: Date) {
+  if (!horario) return null;
+  let s;
+  try {
+    s = situacaoDoCheckin(horario, agora, ultimo?.feito_em ?? null);
+  } catch {
+    return null;
+  }
+  if (s.feito && ultimo) return { texto: `Feito às ${horaCurta(ultimo.feito_em)}`, cor: paleta.salvia.texto, fundo: paleta.salvia.fundo };
+  if (s.alerta) return { texto: 'Sem resposta, família avisada', cor: paleta.alerta.texto, fundo: paleta.alerta.fundo };
+  if (s.aguardando) {
+    const [t1] = tentativasDoCheckin(horario, agora);
+    return { texto: `A Lia chamou às ${horaCurta(t1.toISOString())}`, cor: paleta.lilas.texto, fundo: paleta.lilas.fundo };
+  }
+  return { texto: `Hoje às ${horaDoBanco(horario)}`, cor: paleta.textoSuave, fundo: paleta.superficieNeutra };
+}
+
+/** Cartão do painel: último check-in, o que chamou atenção e a situação de hoje. */
+export function CartaoUltimoCheckin({ ultimo, agora }: { ultimo: CheckinLinha | null; agora: Date }) {
+  const { paciente } = usePaciente();
+  if (!paciente) return null;
+  const status = statusDeHoje(paciente.horario_checkin, ultimo, agora);
+  const resumo = ultimo ? resumoDoCheckin(ultimo) : [];
+  const deHoje =
+    ultimo &&
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(ultimo.feito_em)) ===
+      new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(agora);
+
+  return (
+    <Cartao style={{ gap: 8 }}>
+      <Titulo>
+        {ultimo
+          ? `Último check-in · ${deHoje ? '' : new Date(ultimo.feito_em).toLocaleDateString('pt-BR', { day: 'numeric', month: 'numeric', timeZone: 'America/Sao_Paulo' }) + ' '}${horaCurta(ultimo.feito_em)}`
+          : 'Check-in diário'}
+      </Titulo>
+      {ultimo ? (
+        <>
+          {resumo.length > 0 ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {resumo.map((r) => (
+                <Selo key={r} texto={r} cor={paleta.alerta.texto} fundo={paleta.alerta.fundo} />
+              ))}
+            </View>
+          ) : (
+            <Texto suave>Nenhum sintoma relatado.</Texto>
+          )}
+          {ultimo.notas ? <Texto suave>{ultimo.notas}</Texto> : null}
+          {ultimo.sono ? <Texto suave>Sono: {ultimo.sono}</Texto> : null}
+        </>
+      ) : (
+        <Texto suave>Ainda não houve check-in.</Texto>
+      )}
+      {status && <Selo texto={status.texto} cor={status.cor} fundo={status.fundo} />}
+    </Cartao>
+  );
+}
+
+/** Ajustes: horário em que a Lia chama para o check-in (ou desligar). */
+export function HorarioCheckin() {
   const { paciente, recarregar } = usePaciente();
   const [editando, setEditando] = useState(false);
   const [hora, setHora] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   if (!paciente) return null;
-
   const horario = paciente.horario_checkin;
-  let situacao = null;
-  try {
-    situacao = horario ? situacaoDoCheckin(horario, agora, ultimo?.feito_em ?? null) : null;
-  } catch {
-    situacao = null;
-  }
   const nome = paciente.apelido || paciente.nome;
 
   async function salvar(novo: string | null) {
@@ -41,20 +87,6 @@ export function CheckinDiario({ ultimo, agora }: { ultimo: CheckinLinha | null; 
     await recarregar();
   }
 
-  let status: { texto: string; cor: string; fundo: string } | null = null;
-  if (situacao?.feito && ultimo) {
-    status = { texto: `Feito às ${horaCurta(ultimo.feito_em)}`, cor: cores.sucesso, fundo: '#E3F4EC' };
-  } else if (situacao?.alerta) {
-    status = { texto: 'Sem resposta — família avisada', cor: '#B45309', fundo: '#FEF0DC' };
-  } else if (situacao?.aguardando && horario) {
-    const [t1] = tentativasDoCheckin(horario, agora);
-    status = { texto: `A Lia chamou às ${horaCurta(t1.toISOString())}, aguardando`, cor: '#8A6D00', fundo: '#FFF8D6' };
-  } else if (horario) {
-    status = { texto: `Hoje às ${horaDoBanco(horario)}`, cor: cores.suave, fundo: '#EEF2F6' };
-  }
-
-  const resumo = ultimo ? resumoDoCheckin(ultimo) : [];
-
   return (
     <Cartao>
       <Titulo>Check-in diário</Titulo>
@@ -66,28 +98,6 @@ export function CheckinDiario({ ultimo, agora }: { ultimo: CheckinLinha | null; 
       ) : (
         <Texto suave>Check-in diário desligado.</Texto>
       )}
-      {status && <Selo texto={status.texto} cor={status.cor} fundo={status.fundo} />}
-
-      {ultimo && (
-        <View style={{ gap: 6 }}>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: cores.texto }}>
-            Último check-in: {new Date(ultimo.feito_em).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })} às{' '}
-            {horaCurta(ultimo.feito_em)}
-          </Text>
-          {resumo.length > 0 ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              {resumo.map((r) => (
-                <Selo key={r} texto={r} cor="#B00020" fundo="#FDE7EA" />
-              ))}
-            </View>
-          ) : (
-            <Texto suave>Nenhum sintoma relatado.</Texto>
-          )}
-          {ultimo.sono ? <Texto suave>Sono: {ultimo.sono}</Texto> : null}
-          {ultimo.notas ? <Texto suave>Notas: {ultimo.notas}</Texto> : null}
-        </View>
-      )}
-
       {editando ? (
         <View style={{ gap: 10 }}>
           <Campo rotulo="Horário do check-in" value={hora} onChangeText={setHora} placeholder="09:00" autoCapitalize="none" />
@@ -101,8 +111,8 @@ export function CheckinDiario({ ultimo, agora }: { ultimo: CheckinLinha | null; 
               salvar(lida);
             }}
           />
-          {horario && <Botao variante="perigo" titulo="Desligar check-in diário" onPress={() => salvar(null)} />}
-          <Botao variante="secundario" titulo="Cancelar" onPress={() => setEditando(false)} />
+          {horario && <Botao variante="secundario" titulo="Desligar check-in diário" onPress={() => salvar(null)} />}
+          <Botao variante="texto" titulo="Cancelar" onPress={() => setEditando(false)} />
         </View>
       ) : (
         <Botao
