@@ -95,6 +95,11 @@ $$;
 -- Atualização direta de doses deixa de ser permitida (evita mudar previsto_em pelo app).
 drop policy "doses: confirmar" on public.doses;
 
+-- Ao suspender um remédio, a família apaga as doses futuras ainda não tomadas.
+-- O histórico (doses confirmadas ou já passadas) não pode ser apagado pelo app.
+create policy "doses: família remove futuras" on public.doses for delete to authenticated
+  using (public.e_cuidador(paciente_id) and confirmado_em is null and previsto_em > now());
+
 -- Alertas da escala: índice para os laranjas ainda não vistos.
 create index on public.alertas (criado_em) where visto_em is null and nivel = 'laranja';
 

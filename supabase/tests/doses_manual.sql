@@ -60,3 +60,19 @@ set request.jwt.claim.sub = '33333333-3333-4333-8333-333333333333';
 select public.confirmar_dose((select id from public.doses where status = 'perdido' order by previsto_em limit 1)) is not null as confirmou_atrasada;
 reset role;
 select count(*) = 1 as uma_perdida_virou_tomada from public.doses where horario_id = '00000000-0000-4000-8000-0000000000b3' and status = 'tomado';
+
+\echo '--- 5. Família apaga doses futuras não tomadas (ao suspender remédio); histórico não'
+insert into public.doses (horario_id, paciente_id, previsto_em) values
+ ('00000000-0000-4000-8000-0000000000b1','00000000-0000-4000-8000-000000000001', now() + interval '3 days'),
+ ('00000000-0000-4000-8000-0000000000b1','00000000-0000-4000-8000-000000000001', now() - interval '3 days');
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+delete from public.doses where horario_id = '00000000-0000-4000-8000-0000000000b1';
+reset role;
+select count(*) = 0 as futura_apagada from public.doses where horario_id = '00000000-0000-4000-8000-0000000000b1' and previsto_em > now() + interval '2 days';
+select count(*) >= 2 as historico_mantido from public.doses where horario_id = '00000000-0000-4000-8000-0000000000b1' and previsto_em < now();
+set role authenticated;
+set request.jwt.claim.sub = '33333333-3333-4333-8333-333333333333';
+delete from public.doses;
+reset role;
+select count(*) > 0 as idosa_nao_apaga from public.doses;
