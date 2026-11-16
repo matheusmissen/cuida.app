@@ -7,5 +7,12 @@ alter table public.pacientes add column horario_checkin time default '09:00';
 comment on column public.pacientes.horario_checkin is
   'Horário local do check-in diário da Lia (null = desligado). Definido pela família.';
 
--- Consulta do servidor: último check-in de cada paciente.
--- (o índice checkins (paciente_id, feito_em desc) da migration inicial já atende)
+-- O painel da família recebe check-ins novos em tempo real (respeita RLS).
+-- O índice checkins (paciente_id, feito_em desc) da migration inicial atende as consultas do último check-in.
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    alter publication supabase_realtime add table public.checkins;
+  end if;
+end;
+$$;

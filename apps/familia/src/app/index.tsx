@@ -4,13 +4,16 @@ import {
   SELECT_DOSE,
   situacaoDose,
   type AlertaLinha,
+  type CheckinLinha,
   type DoseComRemedio,
   type SituacaoDose,
 } from '@cuida/cliente';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AlertasUrgentes } from '@/components/alerta-urgente';
 import { CadastroPaciente } from '@/components/cadastro-paciente';
+import { CheckinDiario } from '@/components/checkin-diario';
 import { Botao, Cartao, cores, Erro, Selo, Texto, Titulo } from '@/components/ui';
 import { usePaciente } from '@/lib/paciente';
 import { useSessao } from '@/lib/sessao';
@@ -60,13 +63,14 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
   const { sessao } = useSessao();
   const [doses, setDoses] = useState<DoseComRemedio[]>([]);
   const [alertas, setAlertas] = useState<AlertaLinha[]>([]);
+  const [ultimoCheckin, setUltimoCheckin] = useState<CheckinLinha | null>(null);
   const [ultimaInteracao, setUltimaInteracao] = useState<string | null>(paciente?.ultima_interacao_em ?? null);
   const [agora, setAgora] = useState(new Date());
   const [erro, setErro] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     const [inicio, fim] = limitesDeHoje();
-    const [d, a, p] = await Promise.all([
+    const [d, a, p, c] = await Promise.all([
       supabase
         .from('doses')
         .select(SELECT_DOSE)
@@ -81,7 +85,15 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
         .order('criado_em', { ascending: false })
         .limit(20),
       supabase.from('pacientes').select('ultima_interacao_em').eq('id', pacienteId).single(),
+      supabase
+        .from('checkins')
+        .select('*')
+        .eq('paciente_id', pacienteId)
+        .order('feito_em', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
+    setUltimoCheckin((c.data as CheckinLinha | null) ?? null);
     setErro(d.error?.message ?? a.error?.message ?? null);
     setDoses((d.data as unknown as DoseComRemedio[]) ?? []);
     setAlertas((a.data as AlertaLinha[]) ?? []);
@@ -96,6 +108,7 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
       .channel(`painel-${pacienteId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'alertas', filter: `paciente_id=eq.${pacienteId}` }, carregar)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'doses', filter: `paciente_id=eq.${pacienteId}` }, carregar)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'checkins', filter: `paciente_id=eq.${pacienteId}` }, carregar)
       .subscribe();
     // Plano B se o Realtime cair: atualiza a cada minuto.
     const timer = setInterval(carregar, 60_000);
@@ -126,12 +139,14 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
     carregar();
   }
 
-  const abertos = alertas.filter((a) => !a.visto_em);
+  const urgentes = alertas.filter((a) => !a.visto_em && a.nivel === 'vermelho');
+  const abertos = alertas.filter((a) => !a.visto_em && a.nivel !== 'vermelho');
   const vistos = alertas.filter((a) => a.visto_em).slice(0, 5);
   const nome = paciente?.apelido || paciente?.nome;
 
   return (
     <View style={{ gap: 16 }}>
+      <AlertasUrgentes alertas={urgentes} nomePaciente={nome ?? ''} onVisto={marcarVisto} />
       <Cartao>
         <Text style={estilos.nome}>{nome}</Text>
         <Texto suave>Última vez que usou o app: {haQuantoTempo(ultimaInteracao, agora)}</Texto>
@@ -176,6 +191,8 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
           );
         })}
       </Cartao>
+
+      <CheckinDiario ultimo={ultimoCheckin} agora={agora} />
 
       <View style={{ gap: 10 }}>
         <Botao titulo="Remédios e horários" onPress={() => router.push('/remedios')} />

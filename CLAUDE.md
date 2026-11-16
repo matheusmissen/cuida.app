@@ -108,7 +108,7 @@ Se apertar, cortar primeiro o alerta por silêncio de 24 h e o painel do dia com
 - **README** com: problema, como rodar, link da demo, link do vídeo, arquitetura e como testar as regras de alerta.
 - Repositório público pelo menos até 15/12/2026.
 
-## Estado atual (16/11: etapas 18–21/11 concluída e 22–25/11 quase concluída)
+## Estado atual (etapas 18–21/11 e 22–25/11 concluídas)
 
 Pronto e testado:
 - `packages/regras`: motor de regras de alerta em TypeScript puro, sem dependências, com 27 testes. Use estas funções nas Edge Functions; não reimplemente as regras.
@@ -122,7 +122,10 @@ Pronto e testado:
 - `apps/idoso` (22–25/11): botão "Falar com a Lia"; transcrição no aparelho (expo-speech-recognition, prefere on-device; na web, Web Speech API; sem reconhecimento, campo de texto grande); chama a Edge Function `agente` com `{ texto, historico }` (últimas 12 falas) e mostra/fala a resposta. Lógica pura em `packages/cliente/src/conversa.ts`, com testes.
 - `npm test` roda todos os testes; `npm run typecheck` checa os dois apps.
 
-Falta de 22–25/11: check-in diário iniciado pela Lia no horário configurado (e a regra "check-in sem resposta após 2 tentativas em 1 h", `avaliarCheckinSemResposta`); destaque visual do alerta vermelho no `apps/familia`. Depois: teste ponta a ponta no Supabase hospedado (ainda não feito), botão "Preciso de ajuda" no app do idoso e publicação web (26–27/11).
+- Check-in diário (22–25/11): `pacientes.horario_checkin` (padrão 09:00, null desliga). `situacaoDoCheckin` em `packages/regras/src/checkin.ts` decide as tentativas (no horário e 30 min depois) e o alerta laranja de "sem resposta" 1 h depois (`avaliarCheckinSemResposta`); `verificar-doses` cria o alerta uma vez por dia (`_shared/checkin.ts`). No `apps/idoso`, a Lia puxa a conversa no horário (frase guardada no histórico do agente), o botão vira "Responder à Lia" e há lembretes locais no celular; o alarme de remédio tem prioridade. No `apps/familia`, cartão "Check-in diário" (horário editável, situação de hoje, resumo do último check-in).
+- Alerta vermelho no `apps/familia`: faixa vermelha no topo do painel, som (web) ou vibração (celular) na chegada e título da aba piscando até "Vi, estou cuidando".
+
+Próximo passo (26–27/11): teste ponta a ponta no Supabase hospedado (ainda não feito), botão "Preciso de ajuda" no app do idoso, publicação web na Vercel e paciente sintética completa no banco.
 
 Observações: `npx expo install` precisa de `EXPO_OFFLINE=1` neste ambiente (api.expo.dev bloqueado). O push da família exige `eas init` (projectId).
 

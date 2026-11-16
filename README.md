@@ -121,6 +121,19 @@ Publicar: `supabase functions deploy agente`.
 3. A resposta aparece em letra grande e é falada com `expo-speech`. Se o agente não responder, a Lia avisa
    em voz que não conseguiu e pede para tentar de novo.
 
+## Check-in diário (etapa 22–25/11)
+
+- A família define o horário no painel (padrão 09:00; pode desligar).
+- No horário, a Lia chama no app do idoso ("Vamos conversar um pouquinho? Como está se sentindo hoje?") e
+  repete 30 min depois. No celular também toca um lembrete local. Se o alarme de remédio estiver aberto, o
+  check-in espera o "Tomei".
+- A resposta vai para o agente, que registra o check-in e aplica as regras (por exemplo, "tô quentinha" →
+  febre → alerta vermelho).
+- Sem check-in 1 h depois do horário (2 tentativas), o servidor cria um alerta laranja para o responsável
+  principal. A conta é `situacaoDoCheckin`, em `packages/regras`, usada pelo servidor e pelo app.
+- No app da família, o alerta vermelho aparece como uma faixa no topo do painel, com som ou vibração, até
+  alguém tocar em "Vi, estou cuidando".
+
 ## Regras de alerta
 
 | Nível | Exemplos | Quem é avisado |

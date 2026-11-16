@@ -7,6 +7,7 @@ import { FalarComLia } from '@/components/falar-com-lia';
 import { VincularAparelho } from '@/components/vincular-aparelho';
 import { useAparelho } from '@/lib/aparelho';
 import { tema } from '@/lib/tema';
+import { useCheckin } from '@/lib/use-checkin';
 import { useDoses } from '@/lib/use-doses';
 import { falar, NOME_ASSISTENTE } from '@/lib/voz';
 
@@ -34,11 +35,26 @@ export default function Inicio() {
       </SafeAreaView>
     );
   }
-  return <TelaDoDia pacienteId={paciente.id} apelido={paciente.apelido || paciente.nome.split(' ')[0]} />;
+  return (
+    <TelaDoDia
+      pacienteId={paciente.id}
+      apelido={paciente.apelido || paciente.nome.split(' ')[0]}
+      horarioCheckin={paciente.horario_checkin}
+    />
+  );
 }
 
-function TelaDoDia({ pacienteId, apelido }: { pacienteId: string; apelido: string }) {
+function TelaDoDia({
+  pacienteId,
+  apelido,
+  horarioCheckin,
+}: {
+  pacienteId: string;
+  apelido: string;
+  horarioCheckin: string | null;
+}) {
   const { doses, agora, confirmar } = useDoses(pacienteId);
+  const { convite, recarregar: recarregarCheckin } = useCheckin(pacienteId, apelido, horarioCheckin, agora);
   // Na web o navegador só deixa falar depois de um toque: um botão "Começar" na abertura.
   const [iniciado, setIniciado] = useState(Platform.OS !== 'web');
 
@@ -76,7 +92,8 @@ function TelaDoDia({ pacienteId, apelido }: { pacienteId: string; apelido: strin
           {saudacao(agora)}, {apelido}!
         </Text>
 
-        <FalarComLia />
+        {/* O alarme de remédio tem prioridade: o check-in espera o "Tomei". */}
+        <FalarComLia convite={iniciado && !devidas[0] ? convite : null} aoResponder={recarregarCheckin} />
 
         <View style={estilos.cartao}>
           {proxima ? (

@@ -1,4 +1,4 @@
-import type { Paciente } from '@cuida/cliente';
+import { SELECT_PACIENTE, type Paciente } from '@cuida/cliente';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useSessao } from './sessao';
 import { supabase } from './supabase';
@@ -33,7 +33,7 @@ export function PacienteProvider({ children }: { children: ReactNode }) {
     setCarregando(true);
     const { data, error } = await supabase
       .from('cuidadores')
-      .select('pacientes(id, usuario_id, nome, apelido, condicoes, limite_febre, ultima_interacao_em)')
+      .select(`pacientes(${SELECT_PACIENTE})`)
       .eq('usuario_id', sessao.user.id)
       .order('criado_em')
       .limit(1)
