@@ -16,8 +16,9 @@
 // Segredos: LLM_API_KEY (Anthropic). Opcionais: LLM_MODEL, NOME_ASSISTENTE.
 
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
-import { avaliarCheckin, pedidoDeAjuda, type Alerta, type Checkin } from '../../../packages/regras/src/index.ts';
+import { avaliarCheckin, avaliarNaoEntendeu, pedidoDeAjuda, type Alerta, type Checkin } from '../../../packages/regras/src/index.ts';
 import { criarEAvisar } from '../_shared/alertar.ts';
+import { contarNaoEntendeu } from './entendimento.ts';
 import { FERRAMENTAS } from './ferramentas.ts';
 import { deLinha, paraLinha, type LinhaCheckin } from './mapeamento.ts';
 import { montarPromptSistema } from './prompt.ts';
@@ -238,6 +239,17 @@ Deno.serve(async (req) => {
 
   const revisao = revisarResposta(resposta || FALHA_IA);
   if (revisao.bloqueada) console.warn('agente: resposta bloqueada pela revisão', revisao.motivos);
+
+  // Não entendeu 3 vezes seguidas → avisa a família (regra avaliarNaoEntendeu).
+  const naoEntendeu = avaliarNaoEntendeu(contarNaoEntendeu(historico, revisao.texto));
+  if (naoEntendeu) {
+    try {
+      await criarEAvisar(db, paciente.id, naoEntendeu);
+      alertasGerados.push(naoEntendeu);
+    } catch (erro) {
+      console.error('alerta nao_entendeu', erro instanceof Error ? erro.message : erro);
+    }
+  }
 
   return json({
     resposta: revisao.texto,

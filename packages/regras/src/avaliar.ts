@@ -200,3 +200,16 @@ export function avaliarEstoque(nomeRemedio: string, dosesRestantes: number, dose
     motivo: `${nomeRemedio}: estoque para menos de 5 dias.`,
   };
 }
+
+/**
+ * A assistente não entendeu a pessoa várias vezes seguidas.
+ * Alerta só ao atingir exatamente 3, para não repetir o aviso a cada nova tentativa.
+ */
+export function avaliarNaoEntendeu(tentativasSeguidas: number): Alerta | null {
+  if (tentativasSeguidas !== 3) return null;
+  return {
+    nivel: 'laranja',
+    gatilho: 'geral.nao_entendeu',
+    motivo: 'A Lia não conseguiu entender o que foi dito 3 vezes seguidas.',
+  };
+}
