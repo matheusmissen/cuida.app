@@ -1,0 +1,14 @@
+{
+  "name": "@cuida/regras",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Motor de regras de alerta do Cuida: código determinístico, sem LLM.",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "node --experimental-strip-types --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22.6"
+  }
+}
