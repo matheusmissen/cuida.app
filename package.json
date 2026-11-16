@@ -8,7 +8,10 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "npm run test --workspace=@cuida/regras"
+    "test": "npm run regras:checar && npm run test --workspace=@cuida/regras && npm run test:funcoes",
+    "test:funcoes": "node --experimental-strip-types --test supabase/functions/test/*.test.ts",
+    "regras:sincronizar": "node scripts/sincronizar-regras.mjs",
+    "regras:checar": "node scripts/sincronizar-regras.mjs --checar"
   },
   "engines": {
     "node": ">=22.6"

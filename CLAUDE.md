@@ -24,7 +24,7 @@ O primeiro usuário real é uma idosa que mora sozinha e trata leucemia. O objet
 - Monorepo com `apps/idoso`, `apps/familia` (Expo, TypeScript, Expo Router) e `supabase/` (migrations, Edge Functions).
 - Supabase: Postgres, Auth, Storage, Edge Functions, pg_cron. Região São Paulo. Row Level Security em todas as tabelas.
 - Notificações: expo-notifications (locais para alarmes, push para alertas). Usar build de desenvolvimento EAS, não Expo Go.
-- Áudio: expo-av para gravar. Transcrição e resposta do agente numa Edge Function.
+- Voz: transcrição no aparelho (reconhecimento de fala do sistema) e resposta falada com expo-speech. O agente roda numa Edge Function.
 - LLM com tool calling para o agente. Chaves de API só em variáveis de ambiente do servidor, nunca no app.
 
 ## Regras de interface do app do idoso
@@ -114,6 +114,11 @@ Pronto e testado:
 - `packages/regras`: motor de regras de alerta em TypeScript puro, sem dependências, com 27 testes (`npm test`). Use estas funções nas Edge Functions; não reimplemente as regras.
 - `supabase/migrations`: esquema completo com RLS, funções `criar_paciente`, `gerar_codigo_vinculo`, `vincular_aparelho` e `registrar_interacao`. Validado em Postgres 16 com o teste de `supabase/tests/rls_manual.sql`.
 - `supabase/seed.sql`: paciente fictícia "Dona Maria" com remédios, doses, check-ins e um alerta.
+- `supabase/functions/avaliar-regras`: cron de 1 em 1 minuto (gera doses, realarme aos 30 min, dose perdida aos 60 min, silêncio de 24 h, escala de alertas laranja). Sem LLM.
+- `supabase/functions/agente`: conversa com a Lia. Entrada `POST { texto, historico: [{ papel: 'idoso' | 'lia', texto }] }` com o token do aparelho do idoso; saída `{ resposta, alertas }`. Usa a API da Anthropic (`LLM_API_KEY`, modelo em `LLM_MODEL`), rede de palavras-chave (`sinais.ts`) e revisão das respostas (`revisao.ts`).
+- O app do idoso transcreve a fala no aparelho (reconhecimento de fala do sistema; na web, Web Speech API) e fala a resposta com `expo-speech`. Não há serviço de transcrição no servidor.
+- O app do idoso deve chamar `salvar_push_idoso(token)` depois do vínculo, para o servidor poder repetir o alarme.
+- `npm test` roda 71 testes (regras + lógica das funções + limites do agente) e confere se a cópia das regras em `supabase/functions/_shared/regras` está em dia. Depois de mudar `packages/regras`, rode `npm run regras:sincronizar`.
 
 Próximo passo: criar `apps/idoso` e `apps/familia` com `npx create-expo-app@latest` (template com Expo Router e TypeScript), adicionar suporte a web e o cliente Supabase, e implementar a etapa de 18–21/11.
 
