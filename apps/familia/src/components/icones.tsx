@@ -102,3 +102,49 @@ export const IconeSetaEsquerda = (p: Props) => (
     <Path d="m15 6-6 6 6 6" />
   </Base>
 );
+export const IconeDocumento = (p: Props) => (
+  <Base {...p}>
+    <Path d="M7 3h7l4 4v14H7Z" />
+    <Path d="M14 3v4h4M10 12h5M10 16h5" />
+  </Base>
+);
+export const IconeMais = (p: Props) => (
+  <Base {...p}>
+    <Path d="M12 5v14M5 12h14" />
+  </Base>
+);
+export const IconeCamera = (p: Props) => (
+  <Base {...p}>
+    <Path d="M4 8h3l2-3h6l2 3h3v11H4Z" />
+    <Circle cx="12" cy="13" r="3.5" />
+  </Base>
+);
+export const IconeEnviar = (p: Props) => (
+  <Base {...p}>
+    <Path d="M12 15V3M7 8l5-5 5 5" />
+    <Path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+  </Base>
+);
+export const IconeLapis = (p: Props) => (
+  <Base {...p}>
+    <Path d="M4 20h4L19 9l-4-4L4 16Z" />
+  </Base>
+);
+export const IconeRelogio = (p: Props) => (
+  <Base {...p}>
+    <Circle cx="12" cy="12" r="9" />
+    <Path d="M12 7v5l3 2" />
+  </Base>
+);
+export const IconeFrasco = (p: Props) => (
+  <Base {...p}>
+    <Path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3" />
+    <Path d="M7.5 15h9" />
+  </Base>
+);
+export const IconeLeitura = (p: Props) => (
+  <Base {...p}>
+    <Path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+    <Path d="M8 10h8M8 14h5" />
+  </Base>
+);

@@ -1,15 +1,16 @@
-// Barra de navegação flutuante em pílula (Hoje, Remédios, Alertas, Ajustes).
-// Só o item ativo mostra o nome; os outros têm accessibilityLabel.
+// Barra de navegação flutuante em pílula com 5 ícones (Hoje, Remédios, Documentos, Alertas, Ajustes).
+// O item ativo fica com fundo preto; todos têm accessibilityLabel.
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { IconeAjustes, IconeCasa, IconePilula, IconeSino } from '@/components/icones';
-import { fontes, paleta } from '@/lib/tema';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { IconeAjustes, IconeCasa, IconeDocumento, IconePilula, IconeSino } from '@/components/icones';
+import { paleta } from '@/lib/tema';
 
-export type Aba = 'hoje' | 'remedios' | 'alertas' | 'ajustes';
+export type Aba = 'hoje' | 'remedios' | 'documentos' | 'alertas' | 'ajustes';
 
 const ITENS: { aba: Aba; nome: string; Icone: typeof IconeCasa; ir: () => void }[] = [
   { aba: 'hoje', nome: 'Hoje', Icone: IconeCasa, ir: () => router.navigate('/') },
   { aba: 'remedios', nome: 'Remédios', Icone: IconePilula, ir: () => router.navigate('/remedios') },
+  { aba: 'documentos', nome: 'Documentos', Icone: IconeDocumento, ir: () => router.navigate('/documentos') },
   { aba: 'alertas', nome: 'Alertas', Icone: IconeSino, ir: () => router.navigate({ pathname: '/', params: { vista: 'alertas' } }) },
   { aba: 'ajustes', nome: 'Ajustes', Icone: IconeAjustes, ir: () => router.navigate('/ajustes') },
 ];
@@ -30,8 +31,7 @@ export function BarraNavegacao({ ativa, alertasNovos = 0 }: { ativa: Aba; alerta
               onPress={ativo ? undefined : ir}
               style={[estilos.item, ativo && estilos.itemAtivo]}
             >
-              <Icone tamanho={ativo ? 20 : 22} cor={ativo ? paleta.sobreTinta : paleta.textoSecundario} />
-              {ativo && <Text style={estilos.nome}>{nome}</Text>}
+              <Icone tamanho={22} cor={ativo ? paleta.sobreTinta : paleta.textoSecundario} />
               {aba === 'alertas' && alertasNovos > 0 && !ativo && <View style={estilos.ponto} />}
             </Pressable>
           );
@@ -55,9 +55,8 @@ const estilos = StyleSheet.create({
     gap: 6,
     boxShadow: '0 1px 2px rgba(24,24,28,0.05), 0 12px 28px rgba(24,24,28,0.10)',
   },
-  item: { minWidth: 56, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
-  itemAtivo: { backgroundColor: paleta.tinta, paddingLeft: 16, paddingRight: 20, gap: 8 },
-  nome: { fontFamily: fontes.textoNegrito, fontSize: 15, color: paleta.sobreTinta },
+  item: { width: 56, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  itemAtivo: { backgroundColor: paleta.tinta },
   ponto: {
     position: 'absolute',
     top: 10,

@@ -46,6 +46,9 @@ function Rotas() {
         <Stack.Screen name="index" options={{ headerShown: false, title: 'Hoje' }} />
         <Stack.Screen name="remedios" options={{ headerShown: false, title: 'Remédios', animation: 'none' }} />
         <Stack.Screen name="ajustes" options={{ headerShown: false, title: 'Ajustes', animation: 'none' }} />
+        <Stack.Screen name="documentos/index" options={{ headerShown: false, title: 'Documentos', animation: 'none' }} />
+        <Stack.Screen name="documentos/adicionar" options={{ headerShown: false, title: 'Adicionar documento' }} />
+        <Stack.Screen name="documentos/receita" options={{ headerShown: false, title: 'Confira a receita' }} />
         <Stack.Screen name="vincular" options={{ title: 'Vincular o celular' }} />
       </Stack.Protected>
     </Stack>
