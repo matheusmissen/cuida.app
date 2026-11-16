@@ -134,6 +134,20 @@ Publicar: `supabase functions deploy agente`.
 - No app da família, o alerta vermelho aparece como uma faixa no topo do painel, com som ou vibração, até
   alguém tocar em "Vi, estou cuidando".
 
+## Documentos e leitura de receita
+
+No app da família ficam as receitas, os exames e os relatórios médicos da paciente (tabela `documentos` e bucket privado `documentos`, com arquivos em `<paciente_id>/`). Só o círculo de cuidado vê esses arquivos; o aparelho do idoso não.
+
+A receita pode ser lida pela IA, mas **a família sempre confere antes de qualquer alarme existir**:
+
+1. A família tira a foto (ou envia um PDF); o app guarda o arquivo e cria o documento com status `enviado`.
+2. A Edge Function `ler-receita` lê a imagem com a API da Anthropic e só transcreve. A lógica de `_shared/receita.ts` sugere os horários ("de 8 em 8 horas" → 06:00, 14:00, 22:00; "ao deitar" → 22:00) e marca para revisão o que não ficou claro: frequência ilegível, dose ausente ou leitura incerta.
+3. Na tela "Confira a receita", a família ajusta o que precisar e confirma. O app chama `criar_alarmes_da_receita`, que cria os remédios e horários só dos itens enviados, respeita a duração do tratamento (`remedios.termina_em`) e marca a receita como `conferida`.
+
+Exames e relatórios são só guardados (foto ou PDF, data e lista); a IA não lê esses documentos.
+
+Publicar: `supabase functions deploy ler-receita`. Teste do banco: `supabase/tests/documentos_manual.sql`.
+
 ## Regras de alerta
 
 | Nível | Exemplos | Quem é avisado |

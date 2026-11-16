@@ -17,6 +17,9 @@ Ideia: calmo e simples, com cartões arredondados em tons pastel sobre um fundo 
 | Família avisada | `telas/Idoso-Ajuda.dc.html` | idoso (depois de "Preciso de ajuda") |
 | Painel do dia | `telas/Familia-Painel.dc.html` | família |
 | Alerta vermelho | `telas/Familia-Alerta.dc.html` | família |
+| Documentos (receitas, exames, relatórios) | `telas/Familia-Documentos.dc.html` | família |
+| Adicionar documento | `telas/Familia-Adicionar.dc.html` | família |
+| Confira a receita (leitura pela IA) | `telas/Familia-Receita.dc.html` | família |
 
 ## Regras
 
@@ -44,7 +47,8 @@ Ideia: calmo e simples, com cartões arredondados em tons pastel sobre um fundo 
 - Toda tela que não é a inicial tem um caminho de volta ("Voltar ao início" ou "Tomei").
 
 **App da família**
-- Barra de navegação flutuante em pílula (Hoje, Remédios, Alertas, Ajustes); só o item ativo mostra o nome.
+- Barra de navegação flutuante em pílula com 5 ícones (Hoje, Remédios, Documentos, Alertas, Ajustes); o item ativo fica com fundo preto. Todos com `accessibilityLabel`.
+- Receita lida pela IA: mostrar cada remédio com dose, frequência, duração e horários sugeridos; itens que a IA não leu com segurança ficam com borda tracejada e o selo "Precisa de você". O botão "Criar N alarmes" só conta os itens conferidos. **Nunca criar alarmes sem a família confirmar.**
 - Cartão vermelho de alerta no topo do painel quando houver alerta vermelho não visto, com sombra `alerta`.
 
 **Acessibilidade**

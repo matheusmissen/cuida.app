@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Cuida · Adicionar documento</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Outfit:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+button{font-family:inherit;cursor:pointer}
+a{color:#18181C}a:hover{color:#3A3A42}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F6F3EE; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #18181C; padding: 44px 20px 24px; display: flex; flex-direction: column; gap: 16px; overflow: hidden">
+
+  <a href="Familia-Documentos.dc.html" style="align-self: flex-start; height: 48px; box-sizing: border-box; background: #FFFFFF; color: #18181C; text-decoration: none; font-size: 15px; font-weight: 700; padding: 0 18px 0 12px; border-radius: 24px; display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(24, 24, 28, 0.04), 0 8px 24px rgba(24, 24, 28, 0.05)">
+    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#18181C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+    Documentos
+  </a>
+
+  <div style="display: flex; flex-direction: column; gap: 6px; padding: 0 4px">
+    <h1 style="margin: 0; font-family: 'Outfit', 'Atkinson Hyperlegible', system-ui, sans-serif; font-size: 30px; line-height: 1.1; font-weight: 500; letter-spacing: -0.01em">Adicionar documento</h1>
+    <p style="margin: 0; font-size: 15px; color: #5E5B55">O que você vai guardar?</p>
+  </div>
+
+  <div role="radiogroup" aria-label="Tipo de documento" style="display: flex; flex-direction: column; gap: 10px">
+    <button role="radio" aria-checked="true" style="text-align: left; background: #FFFFFF; border: 2px solid #18181C; border-radius: 26px; padding: 16px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 2px rgba(24, 24, 28, 0.04), 0 8px 24px rgba(24, 24, 28, 0.05)">
+      <span style="width: 48px; height: 48px; flex-shrink: 0; border-radius: 16px; background: #E8E2F6; display: flex; align-items: center; justify-content: center">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#473B87" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7Z"></path><path d="m8.5 8.5 7 7"></path></svg>
+      </span>
+      <span style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 17px; font-weight: 700; color: #18181C">Receita</span>
+        <span style="font-size: 14px; color: #5E5B55">A Lia lê e sugere os alarmes</span>
+      </span>
+      <span style="width: 26px; height: 26px; border-radius: 13px; background: #18181C; display: flex; align-items: center; justify-content: center" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"></path></svg>
+      </span>
+    </button>
+    <button role="radio" aria-checked="false" style="text-align: left; background: #FFFFFF; border: 2px solid transparent; border-radius: 26px; padding: 16px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 2px rgba(24, 24, 28, 0.04), 0 8px 24px rgba(24, 24, 28, 0.05)">
+      <span style="width: 48px; height: 48px; flex-shrink: 0; border-radius: 16px; background: #DDEBDB; display: flex; align-items: center; justify-content: center">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1F5E3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"></path><path d="M7.5 15h9"></path></svg>
+      </span>
+      <span style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 17px; font-weight: 700; color: #18181C">Exame</span>
+        <span style="font-size: 14px; color: #5E5B55">Sangue, imagem, laudos</span>
+      </span>
+      <span style="width: 26px; height: 26px; border-radius: 13px; border: 2px solid #C3D8C2; box-sizing: border-box" aria-hidden="true"></span>
+    </button>
+    <button role="radio" aria-checked="false" style="text-align: left; background: #FFFFFF; border: 2px solid transparent; border-radius: 26px; padding: 16px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 2px rgba(24, 24, 28, 0.04), 0 8px 24px rgba(24, 24, 28, 0.05)">
+      <span style="width: 48px; height: 48px; flex-shrink: 0; border-radius: 16px; background: #FCE4D2; display: flex; align-items: center; justify-content: center">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7A3A0C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v14H7Z"></path><path d="M14 3v4h4M10 12h5M10 16h5"></path></svg>
+      </span>
+      <span style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 17px; font-weight: 700; color: #18181C">Relatório médico</span>
+        <span style="font-size: 14px; color: #5E5B55">Consultas, altas, encaminhamentos</span>
+      </span>
+      <span style="width: 26px; height: 26px; border-radius: 13px; border: 2px solid #E5DFD3; box-sizing: border-box" aria-hidden="true"></span>
+    </button>
+  </div>
+
+  <div style="flex-grow: 1"></div>
+
+  <div style="display: flex; flex-direction: column; gap: 10px">
+    <a href="Familia-Receita.dc.html" style="height: 60px; border-radius: 30px; background: #18181C; color: #FFFFFF; text-decoration: none; font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 20px 32px rgba(24, 24, 28, 0.18)">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4Z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
+      Tirar foto
+    </a>
+    <button style="height: 56px; border-radius: 28px; border: none; background: #FFFFFF; color: #18181C; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 1px 2px rgba(24, 24, 28, 0.04), 0 8px 24px rgba(24, 24, 28, 0.05)">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#18181C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5"></path><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>
+      Escolher arquivo ou PDF
+    </button>
+    <p style="margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: #5E5B55; text-align: center">Os documentos ficam guardados só para a família da Dona Maria.</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
