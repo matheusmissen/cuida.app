@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { BotaoPrincipal, BotaoSecundario, cartao, Destaque, Texto } from '@/components/ui';
 import { useAparelho } from '@/lib/aparelho';
-import { tema } from '@/lib/tema';
+import { cores, espacos, fontes, tamanhos } from '@/lib/tema';
 import { falar } from '@/lib/voz';
 import { LeitorQr } from './leitor-qr';
 
@@ -32,11 +33,13 @@ export function VincularAparelho() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={estilos.conteudo} keyboardShouldPersistTaps="handled">
-        <Text style={estilos.titulo}>Olá! Vamos começar.</Text>
-        <Text style={estilos.texto}>
-          Peça para alguém da sua família abrir o app <Text style={{ fontWeight: '800' }}>Cuida Família</Text> e
-          mostrar o código.
-        </Text>
+        <Destaque tamanho={tamanhos.titulo} accessibilityRole="header">
+          {'Olá! Vamos\ncomeçar.'}
+        </Destaque>
+        <Texto cor={cores.textoSecundario} style={{ lineHeight: 31 }}>
+          Peça para alguém da sua família abrir o app{' '}
+          <Texto peso="negrito">Cuida Família</Texto> e mostrar o código.
+        </Texto>
         {camera ? (
           <LeitorQr
             onCodigo={(c) => {
@@ -46,71 +49,53 @@ export function VincularAparelho() {
             onFechar={() => setCamera(false)}
           />
         ) : (
-          <>
+          <View style={{ gap: 16 }}>
             <TextInput
               value={codigo}
               onChangeText={(t) => setCodigo(t.replace(/\D/g, '').slice(0, 6))}
               keyboardType="number-pad"
               maxLength={6}
               placeholder="000000"
-              placeholderTextColor="#999"
+              placeholderTextColor={cores.textoSuave}
               accessibilityLabel="Código de 6 números"
-              style={estilos.campo}
+              style={[cartao, estilos.campo]}
               onSubmitEditing={() => enviar()}
             />
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => enviar()}
-              disabled={enviando}
-              style={({ pressed }) => [estilos.botao, (pressed || enviando) && { opacity: 0.75 }]}
-            >
-              <Text style={estilos.textoBotao}>{enviando ? 'Conectando…' : 'Entrar'}</Text>
-            </Pressable>
+            <BotaoPrincipal titulo={enviando ? 'Conectando…' : 'Entrar'} desativado={enviando} onPress={() => enviar()} />
             {Platform.OS !== 'web' && (
-              <Pressable accessibilityRole="button" onPress={() => setCamera(true)} style={estilos.secundario}>
-                <Text style={estilos.textoSecundario}>Ler o QR code com a câmera</Text>
-              </Pressable>
+              <BotaoSecundario titulo="Ler o QR code com a câmera" onPress={() => setCamera(true)} />
             )}
-          </>
+          </View>
         )}
-        {erro && <Text style={estilos.erro}>{erro}</Text>}
+        {erro && (
+          <View style={estilos.erro} accessibilityLiveRegion="assertive">
+            <Texto peso="negrito" cor={cores.alerta.texto}>
+              {erro}
+            </Texto>
+          </View>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const estilos = StyleSheet.create({
-  conteudo: { padding: 24, gap: 24, maxWidth: 560, width: '100%', alignSelf: 'center', paddingTop: 48 },
-  titulo: { fontSize: tema.letra.grande, fontWeight: '800', color: tema.texto },
-  texto: { fontSize: tema.letra.minima, color: tema.texto, lineHeight: 32 },
+  conteudo: {
+    padding: espacos.margemTela,
+    gap: 24,
+    maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
+    paddingTop: 48,
+  },
   campo: {
-    fontSize: tema.letra.enorme,
+    fontFamily: fontes.destaque,
+    fontSize: 48,
     letterSpacing: 12,
     textAlign: 'center',
-    borderWidth: 3,
-    borderColor: tema.texto,
-    borderRadius: 16,
     paddingVertical: 16,
-    color: tema.texto,
+    color: cores.tinta,
     minHeight: 96,
   },
-  botao: {
-    minHeight: 88,
-    borderRadius: 20,
-    backgroundColor: tema.primaria,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textoBotao: { fontSize: tema.letra.grande, color: '#fff', fontWeight: '800' },
-  secundario: {
-    minHeight: tema.botaoMin,
-    borderRadius: 20,
-    borderWidth: 3,
-    borderColor: tema.primaria,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  textoSecundario: { fontSize: tema.letra.minima, color: tema.primaria, fontWeight: '800', textAlign: 'center' },
-  erro: { fontSize: tema.letra.minima, color: tema.perigo, fontWeight: '700' },
+  erro: { backgroundColor: cores.alerta.fundo, borderRadius: 24, padding: 18 },
 });

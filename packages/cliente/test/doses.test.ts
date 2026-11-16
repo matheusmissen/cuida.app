@@ -79,3 +79,10 @@ test('lê horários digitados pela família', () => {
   assert.equal(lerHora('25:00'), null);
   assert.equal(lerHora('meio-dia'), null);
 });
+
+import { dataCurta } from '../src/formato.ts';
+
+test('data curta em português, sem "-feira"', () => {
+  assert.equal(dataCurta(new Date('2026-11-20T12:00:00Z')), 'Sexta, 20 de novembro');
+  assert.equal(dataCurta(new Date('2026-11-22T12:00:00Z')), 'Domingo, 22 de novembro');
+});

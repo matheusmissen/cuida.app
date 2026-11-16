@@ -25,6 +25,15 @@ export function lerHora(texto: string): string | null {
   return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
 }
 
+/** 'Quinta, 20 de novembro' (dia da semana sem '-feira'), no horário de Brasília. */
+export function dataCurta(agora: Date): string {
+  const partes = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: FUSO })
+    .formatToParts(agora)
+    .reduce<Record<string, string>>((acc, p) => ({ ...acc, [p.type]: p.value }), {});
+  const dia = partes.weekday.replace('-feira', '');
+  return `${dia.charAt(0).toUpperCase()}${dia.slice(1)}, ${partes.day} de ${partes.month}`;
+}
+
 /** 'Bom dia', 'Boa tarde' ou 'Boa noite', no horário de Brasília. */
 export function saudacao(agora: Date): string {
   const h = Number(new Intl.DateTimeFormat('pt-BR', { hour: 'numeric', hourCycle: 'h23', timeZone: FUSO }).format(agora));

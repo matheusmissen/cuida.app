@@ -104,3 +104,16 @@ export function mensagemErroEscuta(codigo: string): string | null {
       return 'Não consegui ouvir. Aperte o botão e fale de novo.';
   }
 }
+
+/** A família foi avisada na hora (vermelho: todo o círculo; laranja: o responsável principal). */
+export function familiaFoiAvisada(alertas: RespostaAgente['alertas']): boolean {
+  return alertas.some((a) => a.nivel === 'vermelho' || a.nivel === 'laranja');
+}
+
+/**
+ * Pedido de ajuda (ferramenta pedir_ajuda / pedidoDeAjuda do motor de regras): a tela mostra
+ * "Sua família foi avisada". Reconhecido pelo motivo que o motor gera.
+ */
+export function ehPedidoDeAjuda(alerta: RespostaAgente['alertas'][number]): boolean {
+  return alerta.nivel === 'vermelho' && /^(Pediu ajuda|Apertou o botão "Preciso de ajuda")/.test(alerta.motivo);
+}

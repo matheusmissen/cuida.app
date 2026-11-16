@@ -75,3 +75,18 @@ test('erros do reconhecimento viram frases simples; cancelar fica em silêncio',
   assert.match(mensagemErroEscuta('network')!, /internet/);
   assert.ok(mensagemErroEscuta('qualquer-outro'));
 });
+
+import { ehPedidoDeAjuda, familiaFoiAvisada } from '../src/conversa.ts';
+
+test('família avisada: vermelho ou laranja; amarelo e informativo não', () => {
+  assert.equal(familiaFoiAvisada([{ nivel: 'vermelho', motivo: 'Febre ou calafrio.' }]), true);
+  assert.equal(familiaFoiAvisada([{ nivel: 'laranja', motivo: 'Manchas roxas novas.' }]), true);
+  assert.equal(familiaFoiAvisada([{ nivel: 'amarelo', motivo: 'Humor baixo há 3 dias.' }]), false);
+  assert.equal(familiaFoiAvisada([]), false);
+});
+
+test('pedido de ajuda reconhecido pelo motivo do motor de regras', () => {
+  assert.equal(ehPedidoDeAjuda({ nivel: 'vermelho', motivo: 'Pediu ajuda: caiu na cozinha' }), true);
+  assert.equal(ehPedidoDeAjuda({ nivel: 'vermelho', motivo: 'Apertou o botão "Preciso de ajuda".' }), true);
+  assert.equal(ehPedidoDeAjuda({ nivel: 'vermelho', motivo: 'Febre ou calafrio.' }), false);
+});
