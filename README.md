@@ -32,7 +32,7 @@ packages/
   cliente/      cliente Supabase, tipos e utilitários compartilhados pelos apps + testes
 supabase/
   migrations/   esquema do banco com Row Level Security, doses do dia e pg_cron
-  functions/    Edge Functions (Deno); _shared/ tem a lógica pura testada em Node
+  functions/    Edge Functions (Deno): verificar-doses (cron) e agente (Lia); _shared/ e agente/ têm lógica pura testada em Node
   seed.sql      paciente fictícia "Dona Maria" para a demo
   tests/        testes manuais de RLS e das funções de doses (psql)
 ```
@@ -90,6 +90,27 @@ Ligue também o login anônimo (Authentication → Sign In / Providers → Anony
 4. Sem "Tomei": aos 30 min o alarme toca de novo; aos 60 min a Edge Function `verificar-doses` cria um
    alerta laranja (vermelho se o remédio for crítico) e manda push. Laranja sem resposta em 30 min vai
    para o próximo da escala.
+5. Nenhuma interação do celular do idoso em 24 h: a `verificar-doses` cria um alerta vermelho (uma vez por silêncio).
+
+## Conversa com a Lia (Edge Function `agente`)
+
+O celular transcreve a fala no próprio aparelho e envia o texto; a resposta volta em texto e é falada com `expo-speech`.
+
+- Entrada: `POST /functions/v1/agente` com o token do aparelho do idoso e `{ texto, historico?: [{ papel: 'idoso' | 'lia', texto }] }`.
+- Saída: `{ resposta, alertas: [{ nivel, motivo }] }`.
+
+A IA nunca decide sozinha se a família deve ser avisada:
+
+1. O LLM conversa e chama ferramentas: `registrar_checkin`, `confirmar_remedio` (usa a mesma função do botão "Tomei"), `pedir_ajuda` e `proximos_compromissos`.
+2. Uma rede de palavras-chave lê a mesma fala ("tô quentinha", "meio caída", "caí", entendendo negações como "não tive febre") e é mesclada ao que o LLM extraiu: o sinal mais grave vence.
+3. Se houver sinal de alerta e o LLM não registrar o check-in, ou se o LLM estiver fora do ar, o servidor registra sozinho.
+4. `avaliarCheckin` (packages/regras) decide o nível e `criarEAvisar` grava o alerta e avisa a família.
+5. Toda resposta passa por uma revisão que bloqueia diagnóstico, "não é nada", mudança de remédio e pedido de senha.
+
+Segredos: `supabase secrets set LLM_API_KEY=...` (opcionais: `LLM_MODEL`, padrão `claude-haiku-5-5`; `NOME_ASSISTENTE`, padrão `Lia`).
+Publicar: `supabase functions deploy agente`.
+
+> Primeiro deploy: as Edge Functions importam `packages/regras` de fora de `supabase/functions`. Confirme que a CLI empacota esses arquivos. Se não empacotar, copie `packages/regras/src` para `supabase/functions/_shared/regras` e troque os imports.
 
 ## Regras de alerta
 

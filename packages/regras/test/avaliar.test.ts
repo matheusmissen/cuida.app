@@ -8,6 +8,7 @@ import {
   avaliarCheckinSemResposta,
   avaliarDose,
   avaliarEstoque,
+  avaliarNaoEntendeu,
   avaliarSilencio,
   dataLocal,
   diasSeguidos,
@@ -183,5 +184,14 @@ describe('datas no fuso de Brasília', () => {
       { feitoEm: dia(19, '20:00'), humor: 'bom' as const },
     ];
     assert.equal(diasSeguidos(atual, anteriores, (c) => c.humor === 'baixo'), 1);
+  });
+});
+
+describe('não entendeu três vezes seguidas', () => {
+  it('alerta em laranja na terceira vez, uma vez só', () => {
+    assert.equal(avaliarNaoEntendeu(2), null);
+    assert.equal(avaliarNaoEntendeu(3)?.nivel, 'laranja');
+    assert.equal(avaliarNaoEntendeu(3)?.gatilho, 'geral.nao_entendeu');
+    assert.equal(avaliarNaoEntendeu(4), null);
   });
 });
