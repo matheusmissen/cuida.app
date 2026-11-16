@@ -24,7 +24,7 @@ O primeiro usuário real é uma idosa que mora sozinha e trata leucemia. O objet
 - Monorepo com `apps/idoso`, `apps/familia` (Expo, TypeScript, Expo Router) e `supabase/` (migrations, Edge Functions).
 - Supabase: Postgres, Auth, Storage, Edge Functions, pg_cron. Região São Paulo. Row Level Security em todas as tabelas.
 - Notificações: expo-notifications (locais para alarmes, push para alertas). Usar build de desenvolvimento EAS, não Expo Go.
-- Áudio: expo-av para gravar. Transcrição e resposta do agente numa Edge Function.
+- Voz: transcrição no aparelho (reconhecimento de fala do sistema; na web, Web Speech API) e resposta falada com expo-speech. O agente roda na Edge Function `agente`; não há serviço de transcrição no servidor.
 - LLM com tool calling para o agente. Chaves de API só em variáveis de ambiente do servidor, nunca no app.
 
 ## Regras de interface do app do idoso
@@ -115,11 +115,13 @@ Pronto e testado:
 - `packages/cliente`: cliente Supabase (só chave anon), tipos das tabelas e utilitários de doses (usam `avaliarDose`), com testes.
 - `supabase/migrations`: esquema com RLS; `criar_paciente`, `gerar_codigo_vinculo`, `vincular_aparelho`, `registrar_interacao`, `gerar_doses_dia`, `gerar_doses_hoje`, `confirmar_dose`; realtime de alertas/doses; pg_cron (URL e chave no Vault). Validado em Postgres 16 com `supabase/tests/rls_manual.sql` e `doses_manual.sql`.
 - `supabase/functions/verificar-doses`: realarme (30 min), alerta de dose perdida (60 min), escala laranja e push. Lógica pura em `_shared/` com testes em Node (`npm test`). `_shared/alertar.ts` (`criarEAvisar`) deve ser reutilizado pelas próximas funções.
+- `supabase/functions/verificar-doses` também cria o alerta vermelho de silêncio de 24 h (`_shared/silencio.ts`, usa `avaliarSilencio`).
+- `supabase/functions/agente`: conversa com a Lia (API da Anthropic, segredo `LLM_API_KEY`). Entrada `POST { texto, historico?: [{ papel: 'idoso' | 'lia', texto }] }` com o token do aparelho do idoso; saída `{ resposta, alertas }`. Usa `avaliarCheckin` + `criarEAvisar`, rede de palavras-chave (`agente/sinais.ts`) mesclada ao LLM, registro automático se o LLM falhar e revisão das respostas (`agente/revisao.ts`). `confirmar_remedio` chama `confirmar_dose` com o token do idoso.
 - `apps/familia`: login por e-mail, cadastro do paciente com consentimento, remédios/horários, QR de vínculo, painel do dia com alertas em tempo real.
 - `apps/idoso`: login anônimo + vínculo por código/QR, tela única, alarme em tela cheia com "Tomei" e voz (expo-speech), alarmes locais no celular; na web o alarme é um modal.
 - `npm test` roda todos os testes; `npm run typecheck` checa os dois apps.
 
-Próximo passo (22–25/11): check-in por voz, Edge Function `agente`, regras de check-in chamando `avaliarCheckin` e `criarEAvisar`.
+Próximo passo (22–25/11): lado do app do check-in por voz. No `apps/idoso`, um botão grande "Falar com a Lia": transcrever a fala no aparelho, chamar a Edge Function `agente` com o histórico da conversa, mostrar a resposta em letra grande e falar com expo-speech. Check-in diário iniciado pela Lia no horário configurado. No `apps/familia`, o alerta vermelho do check-in já chega pelo realtime de `alertas`; conferir o destaque visual.
 
 Observações: `npx expo install` precisa de `EXPO_OFFLINE=1` neste ambiente (api.expo.dev bloqueado). O push da família exige `eas init` (projectId).
 

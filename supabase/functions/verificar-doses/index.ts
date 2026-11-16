@@ -2,6 +2,7 @@
 // 1. Gera as doses de hoje e de amanhã (idempotente).
 // 2. Doses sem "Tomei": 30 min → realarme; 60 min → alerta (motor de regras, avaliarDose).
 // 3. Alertas laranja não vistos: avisa o próximo da escala a cada 30 min.
+// 4. Nenhuma interação do aparelho do idoso em 24 h: alerta vermelho (uma vez por silêncio).
 // Só aceita a service role (o cron); os apps nunca chamam esta função.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -9,6 +10,7 @@ import { planejarDoses, type DoseLinha, type RegraPaciente } from '../_shared/do
 import { proximosDaEscala } from '../_shared/escala.ts';
 import { carregarCuidadores, criarEAvisar, nomeDoPaciente } from '../_shared/alertar.ts';
 import { enviarPush, mensagensPush } from '../_shared/push.ts';
+import { pacientesEmSilencio } from '../_shared/silencio.ts';
 
 const HORA = 60 * 60_000;
 
@@ -121,9 +123,43 @@ Deno.serve(async (req) => {
     escalados += proximos.length;
   }
 
+  // Silêncio: nenhuma interação do aparelho do idoso em 24 h (regra avaliarSilencio).
+  let silencios = 0;
+  const { data: vinculados } = await supabase
+    .from('pacientes')
+    .select('id, ultima_interacao_em')
+    .not('usuario_id', 'is', null)
+    .lt('ultima_interacao_em', new Date(agora.getTime() - 24 * HORA).toISOString());
+  const lista = (vinculados ?? []) as { id: string; ultima_interacao_em: string | null }[];
+  if (lista.length > 0) {
+    const { data: avisos } = await supabase
+      .from('alertas')
+      .select('paciente_id, criado_em')
+      .eq('gatilho', 'geral.silencio_24h')
+      .in('paciente_id', lista.map((p) => p.id))
+      .order('criado_em', { ascending: true });
+    const ultimoAviso = new Map<string, string>(
+      ((avisos ?? []) as { paciente_id: string; criado_em: string }[]).map((a) => [a.paciente_id, a.criado_em]),
+    );
+    const parados = pacientesEmSilencio(
+      lista.map((p) => ({ id: p.id, ultimaInteracaoEm: p.ultima_interacao_em })),
+      ultimoAviso,
+      agora,
+    );
+    for (const s of parados) {
+      try {
+        await criarEAvisar(supabase, s.pacienteId, s.alerta);
+        silencios++;
+      } catch (erro) {
+        console.error('silencio', erro instanceof Error ? erro.message : erro);
+      }
+    }
+  }
+
   return Response.json({
     realarmes: plano.realarmar.length,
     alertas: alertasCriados,
     escalados,
+    silencios,
   });
 });
