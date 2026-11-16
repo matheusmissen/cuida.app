@@ -3,10 +3,12 @@
 // 2. Doses sem "Tomei": 30 min → realarme; 60 min → alerta (motor de regras, avaliarDose).
 // 3. Alertas laranja não vistos: avisa o próximo da escala a cada 30 min.
 // 4. Nenhuma interação do aparelho do idoso em 24 h: alerta vermelho (uma vez por silêncio).
+// 5. Check-in diário sem resposta após 2 tentativas em 1 h: alerta laranja (uma vez por dia).
 // Só aceita a service role (o cron); os apps nunca chamam esta função.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { planejarDoses, type DoseLinha, type RegraPaciente } from '../_shared/doses.ts';
+import { aplicarRegraDoPaciente, planejarDoses, type DoseLinha, type RegraPaciente } from '../_shared/doses.ts';
+import { checkinsSemResposta } from '../_shared/checkin.ts';
 import { proximosDaEscala } from '../_shared/escala.ts';
 import { carregarCuidadores, criarEAvisar, nomeDoPaciente } from '../_shared/alertar.ts';
 import { enviarPush, mensagensPush } from '../_shared/push.ts';
@@ -156,10 +158,63 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Check-in diário: duas tentativas (no horário e 30 min depois) sem resposta → laranja.
+  let checkinsSemResp = 0;
+  const { data: comCheckin } = await supabase
+    .from('pacientes')
+    .select('id, horario_checkin')
+    .not('usuario_id', 'is', null)
+    .not('horario_checkin', 'is', null);
+  const ativos = (comCheckin ?? []) as { id: string; horario_checkin: string }[];
+  if (ativos.length > 0) {
+    const ids = ativos.map((p) => p.id);
+    const desde = new Date(agora.getTime() - 48 * HORA).toISOString();
+    const [{ data: recentes }, { data: avisosCheckin }, { data: regrasCheckin }] = await Promise.all([
+      supabase.from('checkins').select('paciente_id, feito_em').in('paciente_id', ids).gte('feito_em', desde),
+      supabase
+        .from('alertas')
+        .select('paciente_id, criado_em')
+        .eq('gatilho', 'geral.checkin_sem_resposta')
+        .in('paciente_id', ids)
+        .gte('criado_em', desde),
+      supabase
+        .from('regras')
+        .select('id, paciente_id, gatilho, nivel, ativa')
+        .eq('gatilho', 'geral.checkin_sem_resposta')
+        .in('paciente_id', ids),
+    ]);
+    const maisRecente = (linhas: { paciente_id: string; em: string }[]) => {
+      const m = new Map<string, string>();
+      for (const l of linhas) if (!m.has(l.paciente_id) || Date.parse(l.em) > Date.parse(m.get(l.paciente_id)!)) m.set(l.paciente_id, l.em);
+      return m;
+    };
+    const ultimoCheckin = maisRecente(((recentes ?? []) as { paciente_id: string; feito_em: string }[]).map((c) => ({ paciente_id: c.paciente_id, em: c.feito_em })));
+    const ultimoAvisoCheckin = maisRecente(((avisosCheckin ?? []) as { paciente_id: string; criado_em: string }[]).map((a) => ({ paciente_id: a.paciente_id, em: a.criado_em })));
+    const semResposta = checkinsSemResposta(
+      ativos.map((p) => ({ id: p.id, horarioCheckin: p.horario_checkin, ultimoCheckinEm: ultimoCheckin.get(p.id) ?? null })),
+      ultimoAvisoCheckin,
+      agora,
+    );
+    for (const c of semResposta) {
+      const r = (regrasCheckin ?? []).find((x) => x.paciente_id === c.pacienteId);
+      const { alerta, regraId } = aplicarRegraDoPaciente(
+        c.alerta,
+        r && { id: r.id, pacienteId: r.paciente_id, gatilho: r.gatilho, nivel: r.nivel, ativa: r.ativa },
+      );
+      try {
+        await criarEAvisar(supabase, c.pacienteId, alerta, regraId);
+        checkinsSemResp++;
+      } catch (erro) {
+        console.error('checkin', erro instanceof Error ? erro.message : erro);
+      }
+    }
+  }
+
   return Response.json({
     realarmes: plano.realarmar.length,
     alertas: alertasCriados,
     escalados,
     silencios,
+    checkins_sem_resposta: checkinsSemResp,
   });
 });
