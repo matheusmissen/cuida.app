@@ -1,0 +1,21 @@
+# Configuração do Supabase local (supabase start). Campos ausentes usam o padrão da CLI.
+# No projeto hospedado, ligue as mesmas opções no painel (Authentication → Sign In / Providers).
+project_id = "cuida-app"
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[auth]
+site_url = "http://localhost:8081"
+additional_redirect_urls = ["http://localhost:8082"]
+# O app do idoso entra anonimamente e depois se vincula ao paciente pelo código/QR da família.
+enable_anonymous_sign_ins = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
+# Chamada só pelo pg_cron com a service role; a própria função confere o cabeçalho.
+[functions.verificar-doses]
+verify_jwt = false
