@@ -27,6 +27,10 @@ O primeiro usuário real é uma idosa que mora sozinha e trata leucemia. O objet
 - Voz: transcrição no aparelho (reconhecimento de fala do sistema; na web, Web Speech API) e resposta falada com expo-speech. O agente roda na Edge Function `agente`; não há serviço de transcrição no servidor.
 - LLM com tool calling para o agente. Chaves de API só em variáveis de ambiente do servidor, nunca no app.
 
+## Design
+
+Visual aprovado: "Manhã Clara". Siga `docs/design/README.md` e `docs/design/tokens.json`; as telas de referência estão em `docs/design/telas/` (HTML só para consulta, não importar nos apps).
+
 ## Regras de interface do app do idoso
 
 - Interface em português do Brasil. Letra mínima de 20 pt, alto contraste, botões de no mínimo 64 px.
@@ -126,6 +130,8 @@ Pronto e testado:
 - Alerta vermelho no `apps/familia`: faixa vermelha no topo do painel, som (web) ou vibração (celular) na chegada e título da aba piscando até "Vi, estou cuidando".
 
 Próximo passo (26–27/11): teste ponta a ponta no Supabase hospedado (ainda não feito), botão "Preciso de ajuda" no app do idoso, publicação web na Vercel e paciente sintética completa no banco.
+
+Próximo trabalho de interface: aplicar o design de `docs/design/` nos dois apps (temas a partir de `tokens.json`, fontes Atkinson Hyperlegible e Outfit, telas conforme `docs/design/telas/`).
 
 Observações: `npx expo install` precisa de `EXPO_OFFLINE=1` neste ambiente (api.expo.dev bloqueado). O push da família exige `eas init` (projectId).
 
