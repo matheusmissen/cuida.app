@@ -16,8 +16,9 @@ O primeiro usuário real é uma idosa que mora sozinha e trata leucemia. O objet
 1. Lembrete de remédio com confirmação "Tomei" e aviso à família se não confirmar.
 2. Check-in diário por voz, com regras de alerta (inclui o modelo de leucemia).
 3. Alertas para a família por push, botão "Preciso de ajuda" e alerta por silêncio de 24 h.
+4. Documentos no app da família (decidido em 16/11): receitas lidas por IA a partir da foto, que sugerem remédios e horários para a família **conferir antes** de criar os alarmes; exames e relatórios médicos guardados (foto ou PDF, data, lista), sem leitura por IA.
 
-**Fora do MVP (não implementar ainda):** exames/OCR, checagem de golpe, adicionar contato, WhatsApp, planos pagos, parceiros.
+**Fora do MVP (não implementar ainda):** extrair valores de exames e gráficos, checagem de golpe, adicionar contato, WhatsApp, planos pagos, parceiros.
 
 ## Stack
 
@@ -86,6 +87,13 @@ Limites obrigatórios no prompt de sistema e cobertos por testes:
 - Entende linguagem coloquial: "tô quentinha" = possível febre; "meio caída" = cansaço/humor baixo.
 - Não entendeu três vezes seguidas → avisa a família.
 
+## Documentos e leitura de receita
+
+- Tabela `documentos` (tipo `receita` | `exame` | `relatorio`) e bucket privado `documentos` no Storage, com arquivos em `<paciente_id>/<arquivo>`; só cuidadores do paciente leem e enviam.
+- Edge Function `ler-receita`: recebe `{ documento_id }` com o token do cuidador, lê a imagem com a API da Anthropic (visão) e grava a leitura em `documentos.leitura` com status `aguardando_conferencia`. **Nunca cria alarmes.** A normalização (horários sugeridos, itens que precisam de revisão) é lógica pura em `_shared/receita.ts`, com testes.
+- A família confere e edita na tela "Confira a receita"; ao confirmar, o app chama `criar_alarmes_da_receita(p_documento, p_itens)`, que cria `remedios` e `horarios` só dos itens enviados e marca o documento como `conferida`.
+- Na dúvida, o item fica marcado "Precisa de você" e não entra nos alarmes até a família definir os horários.
+
 ## Cronograma (entrega no Hack Brasil em 30/11/2026, 23:59)
 
 | Datas | Entrega |
@@ -128,6 +136,8 @@ Pronto e testado:
 
 - Check-in diário (22–25/11): `pacientes.horario_checkin` (padrão 09:00, null desliga). `situacaoDoCheckin` em `packages/regras/src/checkin.ts` decide as tentativas (no horário e 30 min depois) e o alerta laranja de "sem resposta" 1 h depois (`avaliarCheckinSemResposta`); `verificar-doses` cria o alerta uma vez por dia (`_shared/checkin.ts`). No `apps/idoso`, a Lia puxa a conversa no horário (frase guardada no histórico do agente), o botão vira "Responder à Lia" e há lembretes locais no celular; o alarme de remédio tem prioridade. No `apps/familia`, cartão "Check-in diário" (horário editável, situação de hoje, resumo do último check-in).
 - Alerta vermelho no `apps/familia`: faixa vermelha no topo do painel, som (web) ou vibração (celular) na chegada e título da aba piscando até "Vi, estou cuidando".
+
+- Documentos (16/11): migration `20261123120000_documentos.sql` (tabela `documentos`, bucket privado `documentos`, `criar_alarmes_da_receita`, `remedios.termina_em` respeitado na geração de doses), validada com `supabase/tests/documentos_manual.sql`. Edge Function `ler-receita` com normalização em `_shared/receita.ts` (18 testes). Falta o lado do app da família: telas Documentos, Adicionar documento e Confira a receita (`docs/design/telas/Familia-*.dc.html`), envio do arquivo ao Storage, chamada à `ler-receita` e confirmação com `criar_alarmes_da_receita`.
 
 Próximo trabalho de interface: aplicar o design de `docs/design/` nos dois apps (temas a partir de `tokens.json`, fontes Atkinson Hyperlegible e Outfit, telas conforme `docs/design/telas/`).
 
