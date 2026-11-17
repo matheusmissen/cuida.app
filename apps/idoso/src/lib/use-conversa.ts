@@ -6,6 +6,7 @@ import {
   FRASE_SEM_CONEXAO,
   lerRespostaDoAgente,
   type Fala,
+  type RespostaAgente,
 } from '@cuida/cliente';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { escutaDisponivel, ouvir, pedirPermissaoDeEscuta } from './escuta';
@@ -20,6 +21,8 @@ export function useConversa(opcoes: { aoResponder?: () => void } = {}) {
   const [estado, setEstado] = useState<EstadoConversa>('parada');
   const [ouvindoAgora, setOuvindoAgora] = useState('');
   const [disse, setDisse] = useState<string | null>(null);
+  // Alertas da última resposta do agente (a tela mostra "família avisada").
+  const [alertas, setAlertas] = useState<RespostaAgente['alertas']>([]);
   const historico = useRef<Fala[]>([]);
   const encerrar = useRef<(() => void) | null>(null);
   const [podeOuvir] = useState(escutaDisponivel);
@@ -46,6 +49,7 @@ export function useConversa(opcoes: { aoResponder?: () => void } = {}) {
       adicionarFala(historico.current, { papel: 'idoso', texto: limpo }),
       { papel: 'lia', texto: resposta.resposta },
     );
+    setAlertas(resposta.alertas);
     falar(resposta.resposta);
     aoResponder.current?.();
   }, []);
@@ -54,6 +58,7 @@ export function useConversa(opcoes: { aoResponder?: () => void } = {}) {
   const iniciarPelaLia = useCallback((frase: string) => {
     historico.current = adicionarFala(historico.current, { papel: 'lia', texto: frase });
     setDisse(null);
+    setAlertas([]);
     falar(frase);
   }, []);
 
@@ -66,6 +71,7 @@ export function useConversa(opcoes: { aoResponder?: () => void } = {}) {
     }
     setOuvindoAgora('');
     setDisse(null);
+    setAlertas([]);
     setEstado('ouvindo');
     encerrar.current = ouvir({
       parcial: setOuvindoAgora,
@@ -85,5 +91,5 @@ export function useConversa(opcoes: { aoResponder?: () => void } = {}) {
   /** Segundo toque no botão: termina de ouvir e envia o que foi dito. */
   const terminar = useCallback(() => encerrar.current?.(), []);
 
-  return { estado, podeOuvir, ouvindoAgora, disse, comecar, terminar, enviar, iniciarPelaLia };
+  return { estado, podeOuvir, ouvindoAgora, disse, alertas, comecar, terminar, enviar, iniciarPelaLia };
 }

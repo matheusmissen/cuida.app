@@ -42,6 +42,15 @@
         {
           "color": "#0B5FFF"
         }
+      ],
+      "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "O Cuida usa a câmera para fotografar receitas e documentos.",
+          "photosPermission": "O Cuida acessa suas fotos para guardar receitas e documentos.",
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {

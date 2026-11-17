@@ -1,15 +1,25 @@
-import { dosesDevidas, horaCurta, proximaDose, saudacao } from '@cuida/cliente';
-import { useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+// Tela única do idoso (referência: docs/design/telas/Idoso-Inicio.dc.html).
+// Início → (toque no microfone ou chamada do check-in) → conversa com a Lia → "Voltar ao início".
+// O alarme de remédio aparece por cima de tudo e tem prioridade sobre o check-in.
+import { dataCurta, dosesDevidas, ehPedidoDeAjuda, horaCurta, proximaDose, saudacao } from '@cuida/cliente';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Alarme } from '@/components/alarme';
-import { FalarComLia } from '@/components/falar-com-lia';
+import { TelaConversa } from '@/components/conversa';
+import { TelaFamiliaAvisada } from '@/components/familia-avisada';
+import { IconeMicrofone } from '@/components/icones';
+import { BotaoPrincipal, Destaque, Texto } from '@/components/ui';
 import { VincularAparelho } from '@/components/vincular-aparelho';
 import { useAparelho } from '@/lib/aparelho';
-import { tema } from '@/lib/tema';
+import { alvos, cores, espacos, sombras, tamanhos } from '@/lib/tema';
 import { useCheckin } from '@/lib/use-checkin';
+import { useConversa } from '@/lib/use-conversa';
 import { useDoses } from '@/lib/use-doses';
-import { falar, NOME_ASSISTENTE } from '@/lib/voz';
+import { falar, NOME_ASSISTENTE, useUltimaFala } from '@/lib/voz';
+
+/** Por quanto tempo a última fala da Lia fica no início (depois do "Tomei", por exemplo). */
+const FALA_RECENTE_MS = 90_000;
 
 export default function Inicio() {
   const { carregando, paciente, erro } = useAparelho();
@@ -17,20 +27,20 @@ export default function Inicio() {
   if (carregando) {
     return (
       <SafeAreaView style={estilos.centro}>
-        <ActivityIndicator size="large" color={tema.primaria} />
+        <ActivityIndicator size="large" color={cores.tinta} />
       </SafeAreaView>
     );
   }
   if (erro) {
     return (
       <SafeAreaView style={estilos.centro}>
-        <Text style={estilos.texto}>{erro}</Text>
+        <Texto style={{ textAlign: 'center' }}>{erro}</Texto>
       </SafeAreaView>
     );
   }
   if (!paciente) {
     return (
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: cores.fundo }}>
         <VincularAparelho />
       </SafeAreaView>
     );
@@ -44,6 +54,8 @@ export default function Inicio() {
   );
 }
 
+type Modo = 'inicio' | 'conversa' | 'avisada';
+
 function TelaDoDia({
   pacienteId,
   apelido,
@@ -55,93 +67,207 @@ function TelaDoDia({
 }) {
   const { doses, agora, confirmar } = useDoses(pacienteId);
   const { convite, recarregar: recarregarCheckin } = useCheckin(pacienteId, apelido, horarioCheckin, agora);
+  const conversa = useConversa({ aoResponder: recarregarCheckin });
+  const [modo, setModo] = useState<Modo>('inicio');
   // Na web o navegador só deixa falar depois de um toque: um botão "Começar" na abertura.
   const [iniciado, setIniciado] = useState(Platform.OS !== 'web');
+  const chamadas = useRef(new Set<string>());
+  const ultimaFala = useUltimaFala();
 
   const devidas = dosesDevidas(doses, agora);
   const proxima = proximaDose(doses, agora);
-  const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(agora);
-  const tomadasHoje = doses.filter(
-    (d) => d.confirmado_em && new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(d.previsto_em)) === hoje,
-  );
+  const fmtDia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' });
+  const hoje = fmtDia.format(agora);
+  const dosesHoje = doses.filter((d) => fmtDia.format(new Date(d.previsto_em)) === hoje);
+  const tomadasHoje = dosesHoje.filter((d) => d.confirmado_em).length;
+
+  // Check-in diário: a Lia puxa a conversa uma vez por tentativa, depois de qualquer alarme.
+  const alarmeAberto = Boolean(devidas[0]);
+  useEffect(() => {
+    if (!iniciado || alarmeAberto || !convite || conversa.estado !== 'parada') return;
+    if (chamadas.current.has(convite.chave)) return;
+    chamadas.current.add(convite.chave);
+    setModo('conversa');
+    conversa.iniciarPelaLia(convite.frase);
+  }, [iniciado, alarmeAberto, convite, conversa]);
+
+  // Pedido de ajuda registrado pelo agente: mostra "Sua família foi avisada".
+  useEffect(() => {
+    if (conversa.alertas.some(ehPedidoDeAjuda)) setModo('avisada');
+  }, [conversa.alertas]);
+
+  const alarme = devidas[0] && <Alarme dose={devidas[0]} apelido={apelido} agora={agora} onTomei={confirmar} />;
 
   if (!iniciado) {
     return (
       <SafeAreaView style={estilos.centro}>
-        <Text style={estilos.saudacao}>
-          {saudacao(agora)}, {apelido}!
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          style={estilos.comecar}
+        <View style={{ gap: 6, alignSelf: 'stretch' }}>
+          <Texto tamanho={20} cor={cores.textoSuave}>
+            {dataCurta(agora)}
+          </Texto>
+          <Destaque tamanho={tamanhos.titulo}>{`${saudacao(agora)},\n${apelido}`}</Destaque>
+        </View>
+        <BotaoPrincipal
+          titulo="Começar"
           onPress={() => {
             setIniciado(true);
-            falar(`${saudacao(agora)}, ${apelido}! Eu sou a ${NOME_ASSISTENTE}. Quando quiser conversar, aperte o botão azul.`);
+            falar(`${saudacao(agora)}, ${apelido}! Eu sou a ${NOME_ASSISTENTE}. Quando quiser conversar, aperte o botão do microfone.`);
           }}
-        >
-          <Text style={estilos.textoComecar}>Começar</Text>
-        </Pressable>
+        />
       </SafeAreaView>
     );
   }
 
+  if (modo === 'conversa') {
+    return (
+      <>
+        <TelaConversa conversa={conversa} aoVoltar={() => setModo('inicio')} />
+        {alarme}
+      </>
+    );
+  }
+  if (modo === 'avisada') {
+    return (
+      <>
+        <TelaFamiliaAvisada aoVoltar={() => setModo('inicio')} />
+        {alarme}
+      </>
+    );
+  }
+
+  const falaRecente = ultimaFala && agora.getTime() - ultimaFala.em < FALA_RECENTE_MS ? ultimaFala.texto : null;
+  const rotuloMic = convite ? `Responder à ${NOME_ASSISTENTE}` : `Falar com a ${NOME_ASSISTENTE}`;
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: tema.fundo }}>
-      <ScrollView contentContainerStyle={estilos.conteudo}>
-        <Text style={estilos.saudacao}>
-          {saudacao(agora)}, {apelido}!
-        </Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: cores.fundo }}>
+      <ScrollView contentContainerStyle={estilos.tela}>
+        <View style={{ gap: 6 }}>
+          <Texto tamanho={20} cor={cores.textoSuave}>
+            {dataCurta(agora)}
+          </Texto>
+          <Destaque tamanho={tamanhos.titulo} accessibilityRole="header">
+            {`${saudacao(agora)},\n${apelido}`}
+          </Destaque>
+        </View>
 
-        {/* O alarme de remédio tem prioridade: o check-in espera o "Tomei". */}
-        <FalarComLia convite={iniciado && !devidas[0] ? convite : null} aoResponder={recarregarCheckin} />
-
-        <View style={estilos.cartao}>
+        <View style={estilos.remedios}>
+          <View style={estilos.rotulo}>
+            <View style={estilos.ponto} />
+            <Texto tamanho={20} cor={cores.salvia.texto}>
+              Próximo remédio
+            </Texto>
+          </View>
           {proxima ? (
-            <>
-              <Text style={estilos.rotulo}>Próximo remédio</Text>
-              <Text style={estilos.grande}>
-                {horaCurta(proxima.previsto_em)} · {proxima.horarios.remedios.nome}
-              </Text>
-              <Text style={estilos.texto}>{proxima.horarios.remedios.dose}</Text>
-            </>
+            <View style={estilos.proximo}>
+              <Destaque tamanho={tamanhos.horario} style={{ lineHeight: tamanhos.horario, letterSpacing: -0.02 * tamanhos.horario }}>
+                {horaCurta(proxima.previsto_em)}
+              </Destaque>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Texto tamanho={24} peso="negrito">
+                  {proxima.horarios.remedios.nome}
+                </Texto>
+                <Texto tamanho={20} cor={cores.salvia.texto}>
+                  {proxima.horarios.remedios.dose}
+                </Texto>
+              </View>
+            </View>
           ) : (
-            <Text style={estilos.grande}>Nenhum remédio marcado para depois.</Text>
+            <Texto tamanho={24} peso="negrito">
+              Nenhum remédio marcado para depois.
+            </Texto>
+          )}
+          {dosesHoje.length > 0 && (
+            <View style={estilos.progresso}>
+              <View style={estilos.barras} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                {dosesHoje.map((d) => (
+                  <View
+                    key={d.id}
+                    style={[estilos.barra, { backgroundColor: d.confirmado_em ? cores.salvia.forte : cores.salvia.borda }]}
+                  />
+                ))}
+              </View>
+              <Texto tamanho={20}>
+                <Texto tamanho={20} peso="negrito">
+                  {tomadasHoje} de {dosesHoje.length}
+                </Texto>{' '}
+                remédios hoje
+              </Texto>
+            </View>
           )}
         </View>
 
-        {tomadasHoje.length > 0 && (
-          <View style={estilos.cartao}>
-            <Text style={estilos.rotulo}>Hoje você já tomou</Text>
-            {tomadasHoje.map((d) => (
-              <Text key={d.id} style={estilos.texto}>
-                ✓ {horaCurta(d.previsto_em)} · {d.horarios.remedios.nome}
-              </Text>
-            ))}
+        {falaRecente && (
+          <View style={estilos.lia} accessibilityLiveRegion="polite">
+            <Texto tamanho={20} peso="negrito" cor={cores.lilas.texto}>
+              {NOME_ASSISTENTE}
+            </Texto>
+            <Destaque tamanho={tamanhos.destaque} style={{ lineHeight: 30 }}>
+              {falaRecente}
+            </Destaque>
           </View>
         )}
-      </ScrollView>
 
-      {devidas[0] && <Alarme dose={devidas[0]} apelido={apelido} agora={agora} onTomei={confirmar} />}
+        <View style={estilos.blocoMic}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={rotuloMic}
+            onPress={() => {
+              setModo('conversa');
+              // Sem reconhecimento de fala (ex.: Firefox), a conversa abre com o campo de texto.
+              if (conversa.podeOuvir) conversa.comecar();
+            }}
+            style={({ pressed }) => [estilos.mic, pressed && { opacity: 0.85 }]}
+          >
+            <IconeMicrofone tamanho={60} cor={cores.sobreTinta} traco={1.8} />
+          </Pressable>
+          <Destaque tamanho={28} style={{ marginTop: 14, textAlign: 'center' }}>
+            {rotuloMic}
+          </Destaque>
+        </View>
+      </ScrollView>
+      {alarme}
     </SafeAreaView>
   );
 }
 
 const estilos = StyleSheet.create({
-  centro: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 32, backgroundColor: tema.fundo },
-  conteudo: { padding: 24, gap: 20, maxWidth: 640, width: '100%', alignSelf: 'center' },
-  saudacao: { fontSize: tema.letra.grande, fontWeight: '800', color: tema.texto, textAlign: 'center' },
-  cartao: { borderWidth: 3, borderColor: tema.texto, borderRadius: 20, padding: 20, gap: 8 },
-  rotulo: { fontSize: tema.letra.minima, fontWeight: '700', color: tema.suave },
-  grande: { fontSize: tema.letra.media, fontWeight: '800', color: tema.texto },
-  texto: { fontSize: tema.letra.minima, color: tema.texto, lineHeight: 32 },
-  comecar: {
-    minHeight: 120,
-    minWidth: 280,
-    borderRadius: 24,
-    backgroundColor: tema.primaria,
+  centro: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    padding: espacos.margemTela,
+    gap: 40,
+    backgroundColor: cores.fundo,
+    maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
   },
-  textoComecar: { fontSize: tema.letra.enorme, fontWeight: '900', color: '#fff' },
+  tela: {
+    flexGrow: 1,
+    paddingHorizontal: espacos.margemTela,
+    paddingTop: 36,
+    paddingBottom: 28,
+    gap: 22,
+    maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  remedios: { backgroundColor: cores.salvia.fundo, borderRadius: 34, padding: 22, gap: 16 },
+  rotulo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  ponto: { width: 10, height: 10, borderRadius: 5, backgroundColor: cores.salvia.forte },
+  proximo: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  progresso: { backgroundColor: cores.salvia.fundoClaro, borderRadius: 22, paddingVertical: 14, paddingHorizontal: 16, gap: 10 },
+  barras: { flexDirection: 'row', gap: 6 },
+  barra: { flex: 1, height: 10, borderRadius: 5 },
+  lia: { backgroundColor: cores.lilas.fundo, borderRadius: 28, padding: 20, gap: 6 },
+  blocoMic: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 22, paddingVertical: 28 },
+  mic: {
+    width: alvos.microfone,
+    height: alvos.microfone,
+    borderRadius: alvos.microfone / 2,
+    backgroundColor: cores.tinta,
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: sombras.haloMicrofone,
+  },
 });

@@ -1,3 +1,4 @@
+// Peças de interface do app da família no visual "Manhã Clara" (tokens em lib/tema.ts).
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -6,42 +7,83 @@ import {
   Text,
   TextInput,
   View,
+  type StyleProp,
   type TextInputProps,
+  type TextStyle,
   type ViewStyle,
 } from 'react-native';
+import { alvos, fontes, paleta, raios, sombras, tamanhos } from '@/lib/tema';
 
+/** Nomes curtos usados pelas telas, mapeados para os tokens. */
 export const cores = {
-  fundo: '#F5F7FA',
-  cartao: '#FFFFFF',
-  texto: '#0F172A',
-  suave: '#475569',
-  borda: '#D7DEE7',
-  primaria: '#0B5FFF',
-  perigo: '#B00020',
-  sucesso: '#11734B',
+  fundo: paleta.fundo,
+  cartao: paleta.cartao,
+  texto: paleta.tinta,
+  secundario: paleta.textoSecundario,
+  suave: paleta.textoSuave,
+  borda: paleta.divisor,
+  neutra: paleta.superficieNeutra,
+  primaria: paleta.tinta,
+  perigo: paleta.alerta.forte,
+  sucesso: paleta.salvia.forte,
 };
 
 export function Tela({ children }: { children: ReactNode }) {
   return <View style={estilos.tela}>{children}</View>;
 }
 
-export function Cartao({ children, style }: { children: ReactNode; style?: ViewStyle }) {
+export function Cartao({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   return <View style={[estilos.cartao, style]}>{children}</View>;
 }
 
+/** Título de seção (17 pt, negrito). */
 export function Titulo({ children }: { children: ReactNode }) {
-  return <Text style={estilos.titulo}>{children}</Text>;
+  return (
+    <Text style={estilos.titulo} accessibilityRole="header">
+      {children}
+    </Text>
+  );
 }
 
-export function Texto({ children, suave }: { children: ReactNode; suave?: boolean }) {
-  return <Text style={[estilos.texto, suave && { color: cores.suave }]}>{children}</Text>;
+/** Título de página em Outfit (30 pt). */
+export function TituloPagina({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
+  return (
+    <Text style={[estilos.tituloPagina, style]} accessibilityRole="header">
+      {children}
+    </Text>
+  );
 }
 
-export function Campo({ rotulo, ...props }: TextInputProps & { rotulo: string }) {
+export function Texto({
+  children,
+  suave,
+  negrito,
+  style,
+}: {
+  children: ReactNode;
+  suave?: boolean;
+  negrito?: boolean;
+  style?: StyleProp<TextStyle>;
+}) {
+  return (
+    <Text
+      style={[
+        estilos.texto,
+        suave && { color: cores.secundario },
+        negrito && { fontFamily: fontes.textoNegrito },
+        style,
+      ]}
+    >
+      {children}
+    </Text>
+  );
+}
+
+export function Campo({ rotulo, style, ...props }: TextInputProps & { rotulo: string }) {
   return (
     <View style={{ gap: 6 }}>
       <Text style={estilos.rotulo}>{rotulo}</Text>
-      <TextInput placeholderTextColor="#94A3B8" style={estilos.campo} {...props} />
+      <TextInput placeholderTextColor={paleta.textoSuave} style={[estilos.campo, style]} {...props} />
     </View>
   );
 }
@@ -52,35 +94,44 @@ export function Botao({
   variante = 'primario',
   carregando,
   desativado,
+  icone,
 }: {
   titulo: string;
   onPress: () => void;
-  variante?: 'primario' | 'secundario' | 'perigo';
+  variante?: 'primario' | 'secundario' | 'perigo' | 'texto';
   carregando?: boolean;
   desativado?: boolean;
+  icone?: ReactNode;
 }) {
-  const primario = variante === 'primario';
-  const corBorda = variante === 'perigo' ? cores.perigo : cores.primaria;
+  const fundo = { primario: paleta.tinta, perigo: paleta.alerta.forte, secundario: paleta.cartao, texto: 'transparent' }[variante];
+  const corTexto = variante === 'primario' || variante === 'perigo' ? paleta.sobreTinta : paleta.tinta;
+  const sombra = { primario: sombras.botaoPrincipal, perigo: sombras.alerta, secundario: sombras.cartao, texto: undefined }[variante];
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={titulo}
+      accessibilityState={{ disabled: carregando || desativado, busy: carregando }}
       onPress={onPress}
       disabled={carregando || desativado}
       style={({ pressed }) => [
         estilos.botao,
-        { backgroundColor: primario ? cores.primaria : 'transparent', borderColor: corBorda },
-        (pressed || desativado) && { opacity: 0.6 },
+        { backgroundColor: fundo, boxShadow: sombra },
+        (pressed || desativado) && { opacity: 0.7 },
       ]}
     >
       {carregando ? (
-        <ActivityIndicator color={primario ? '#fff' : corBorda} />
+        <ActivityIndicator color={corTexto} />
       ) : (
-        <Text style={[estilos.textoBotao, { color: primario ? '#fff' : corBorda }]}>{titulo}</Text>
+        <>
+          {icone}
+          <Text style={[estilos.textoBotao, { color: corTexto }]}>{titulo}</Text>
+        </>
       )}
     </Pressable>
   );
 }
 
+/** Selo de status em pílula (13–14 pt em negrito). */
 export function Selo({ texto, cor, fundo }: { texto: string; cor: string; fundo: string }) {
   return (
     <View style={[estilos.selo, { backgroundColor: fundo }]}>
@@ -89,44 +140,86 @@ export function Selo({ texto, cor, fundo }: { texto: string; cor: string; fundo:
   );
 }
 
+/** Avatar redondo com inicial (pêssego para pessoas da família, lilás para a Lia). */
+export function Avatar({
+  nome,
+  tamanho = 48,
+  fundo = paleta.pessego.fundo,
+  cor = paleta.pessego.texto,
+}: {
+  nome: string;
+  tamanho?: number;
+  fundo?: string;
+  cor?: string;
+}) {
+  return (
+    <View
+      style={{ width: tamanho, height: tamanho, borderRadius: tamanho / 2, backgroundColor: fundo, alignItems: 'center', justifyContent: 'center' }}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Text style={{ fontFamily: fontes.destaque, fontSize: Math.round(tamanho * 0.42), color: cor }}>
+        {nome.trim().charAt(0).toUpperCase()}
+      </Text>
+    </View>
+  );
+}
+
+export function Divisor() {
+  return <View style={{ height: 1, backgroundColor: cores.borda }} />;
+}
+
 export function Erro({ mensagem }: { mensagem: string | null }) {
   if (!mensagem) return null;
-  return <Text style={estilos.erro}>{mensagem}</Text>;
+  return (
+    <Text style={estilos.erro} accessibilityLiveRegion="polite">
+      {mensagem}
+    </Text>
+  );
 }
 
 const estilos = StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   cartao: {
     backgroundColor: cores.cartao,
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: raios.cartaoMedio,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
     gap: 12,
-    borderWidth: 1,
-    borderColor: cores.borda,
+    boxShadow: sombras.cartao,
   },
-  titulo: { fontSize: 20, fontWeight: '700', color: cores.texto },
-  texto: { fontSize: 16, color: cores.texto, lineHeight: 22 },
-  rotulo: { fontSize: 14, fontWeight: '600', color: cores.suave },
+  titulo: { fontFamily: fontes.textoNegrito, fontSize: tamanhos.secao, color: cores.texto },
+  tituloPagina: {
+    fontFamily: fontes.destaque,
+    fontSize: tamanhos.titulo,
+    lineHeight: Math.round(tamanhos.titulo * 1.1),
+    letterSpacing: -0.3,
+    color: cores.texto,
+  },
+  texto: { fontFamily: fontes.texto, fontSize: tamanhos.corpo, color: cores.texto, lineHeight: 21 },
+  rotulo: { fontFamily: fontes.textoNegrito, fontSize: 14, color: cores.secundario },
   campo: {
+    borderRadius: raios.pequeno,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: tamanhos.lista,
+    fontFamily: fontes.texto,
+    color: cores.texto,
+    backgroundColor: cores.cartao,
     borderWidth: 1,
     borderColor: cores.borda,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: cores.texto,
-    backgroundColor: '#fff',
   },
   botao: {
-    minHeight: 48,
-    borderRadius: 10,
-    borderWidth: 2,
+    minHeight: alvos.familiaMinimo,
+    borderRadius: raios.pilula,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 20,
   },
-  textoBotao: { fontSize: 16, fontWeight: '700' },
-  selo: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  textoSelo: { fontSize: 13, fontWeight: '700' },
-  erro: { color: cores.perigo, fontSize: 15 },
+  textoBotao: { fontFamily: fontes.textoNegrito, fontSize: tamanhos.lista },
+  selo: { alignSelf: 'flex-start', borderRadius: raios.pilula, paddingHorizontal: 11, paddingVertical: 5 },
+  textoSelo: { fontFamily: fontes.textoNegrito, fontSize: 14 },
+  erro: { color: paleta.alerta.texto, fontFamily: fontes.texto, fontSize: tamanhos.corpo },
 });

@@ -1,6 +1,6 @@
+// Painel do dia da família (referências: docs/design/telas/Familia-Painel.dc.html e Familia-Alerta.dc.html).
 import {
   horaCurta,
-  NIVEIS,
   SELECT_DOSE,
   situacaoDose,
   type AlertaLinha,
@@ -8,23 +8,34 @@ import {
   type DoseComRemedio,
   type SituacaoDose,
 } from '@cuida/cliente';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { AlertasUrgentes } from '@/components/alerta-urgente';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { CartaoUrgente, TelaAlerta, useAvisoUrgente } from '@/components/alerta-urgente';
 import { CadastroPaciente } from '@/components/cadastro-paciente';
-import { CheckinDiario } from '@/components/checkin-diario';
-import { Botao, Cartao, cores, Erro, Selo, Texto, Titulo } from '@/components/ui';
+import { CartaoUltimoCheckin } from '@/components/checkin-diario';
+import { BarraNavegacao, ESPACO_BARRA } from '@/components/navegacao';
+import { Avatar, Botao, Cartao, cores, Divisor, Erro, Selo, Texto, Titulo, TituloPagina } from '@/components/ui';
 import { usePaciente } from '@/lib/paciente';
 import { useSessao } from '@/lib/sessao';
 import { supabase } from '@/lib/supabase';
+import { espacos, fontes, paleta } from '@/lib/tema';
 
-const SITUACAO: Record<SituacaoDose, { texto: string; cor: string; fundo: string }> = {
-  tomada: { texto: 'Tomou', cor: cores.sucesso, fundo: '#E3F4EC' },
-  perdida: { texto: 'Não confirmou', cor: NIVEIS.vermelho.cor, fundo: NIVEIS.vermelho.fundo },
-  atrasada: { texto: 'Atrasada', cor: NIVEIS.laranja.cor, fundo: NIVEIS.laranja.fundo },
-  agora: { texto: 'Alarme tocando', cor: NIVEIS.amarelo.cor, fundo: NIVEIS.amarelo.fundo },
-  futura: { texto: 'Mais tarde', cor: cores.suave, fundo: '#EEF2F6' },
+type Cor = { texto: string; cor: string; fundo: string };
+const SITUACAO: Record<SituacaoDose, Cor> = {
+  tomada: { texto: 'Tomou', cor: paleta.salvia.texto, fundo: paleta.salvia.fundo },
+  perdida: { texto: 'Não confirmou', cor: paleta.alerta.texto, fundo: paleta.alerta.fundo },
+  atrasada: { texto: 'Atrasada', cor: paleta.alerta.texto, fundo: paleta.alerta.fundo },
+  agora: { texto: 'Alarme tocando', cor: paleta.salvia.texto, fundo: paleta.salvia.fundo },
+  futura: { texto: 'Mais tarde', cor: paleta.textoSuave, fundo: paleta.superficieNeutra },
+};
+const PROXIMO: Cor = { texto: 'Próximo', cor: paleta.sobreTinta, fundo: paleta.tinta };
+const NIVEL: Record<AlertaLinha['nivel'], string> = {
+  vermelho: 'Urgente',
+  laranja: 'Atenção',
+  amarelo: 'Acompanhar',
+  informativo: 'Histórico',
 };
 
 /** Início e fim do dia de hoje no horário de Brasília (sem horário de verão). */
@@ -33,29 +44,36 @@ function limitesDeHoje(): [string, string] {
   return [`${hoje}T00:00:00-03:00`, `${hoje}T23:59:59-03:00`];
 }
 
-function haQuantoTempo(iso: string | null, agora: Date): string {
-  if (!iso) return 'nunca';
+/** 'há 3 min' separado em prefixo e valor, para o número grande do resumo. */
+function haQuantoTempo(iso: string | null, agora: Date): [string, string] {
+  if (!iso) return ['', 'nunca'];
   const min = Math.round((agora.getTime() - Date.parse(iso)) / 60_000);
-  if (min < 1) return 'agora há pouco';
-  if (min < 60) return `há ${min} min`;
+  if (min < 1) return ['', 'agora'];
+  if (min < 60) return ['há ', `${min} min`];
   const h = Math.floor(min / 60);
-  if (h < 24) return `há ${h} h`;
-  return `há ${Math.floor(h / 24)} dia(s)`;
+  if (h < 24) return ['há ', `${h} h`];
+  return ['há ', `${Math.floor(h / 24)} d`];
 }
 
 export default function Painel() {
   const { paciente, carregando, erro } = usePaciente();
 
   if (carregando) {
-    return <ActivityIndicator style={{ marginTop: 48 }} size="large" color={cores.primaria} />;
+    return <ActivityIndicator style={{ marginTop: 48 }} size="large" color={cores.texto} />;
   }
-  return (
-    <ScrollView contentContainerStyle={estilos.conteudo}>
-      <Erro mensagem={erro} />
-      {paciente ? <PainelDoDia pacienteId={paciente.id} /> : <CadastroPaciente />}
-      <BotaoSair />
-    </ScrollView>
-  );
+  if (!paciente) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: cores.fundo }}>
+        <ScrollView contentContainerStyle={estilos.conteudo}>
+          <TituloPagina style={{ paddingHorizontal: 4 }}>Cuida Família</TituloPagina>
+          <Erro mensagem={erro} />
+          <CadastroPaciente />
+          <Botao variante="texto" titulo="Sair" onPress={() => supabase.auth.signOut()} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+  return <PainelDoDia pacienteId={paciente.id} />;
 }
 
 function PainelDoDia({ pacienteId }: { pacienteId: string }) {
@@ -139,99 +157,189 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
     carregar();
   }
 
+  const { vista } = useLocalSearchParams<{ vista?: string }>();
+  const [alertaAberto, setAlertaAberto] = useState<string | null>(null);
+
+  const nome = paciente?.apelido || paciente?.nome || '';
   const urgentes = alertas.filter((a) => !a.visto_em && a.nivel === 'vermelho');
   const abertos = alertas.filter((a) => !a.visto_em && a.nivel !== 'vermelho');
-  const vistos = alertas.filter((a) => a.visto_em).slice(0, 5);
-  const nome = paciente?.apelido || paciente?.nome;
+  const naoVistos = alertas.filter((a) => !a.visto_em && a.nivel !== 'informativo').length;
+  useAvisoUrgente(urgentes, nome);
+
+  const aberto = alertas.find((a) => a.id === alertaAberto);
+  if (aberto) {
+    return (
+      <TelaAlerta
+        alerta={aberto}
+        nomePaciente={nome}
+        ultimoCheckin={ultimoCheckin}
+        onVoltar={() => setAlertaAberto(null)}
+        onVisto={async (id) => {
+          await marcarVisto(id);
+          setAlertaAberto(null);
+        }}
+      />
+    );
+  }
+
+  const tomadas = doses.filter((d) => d.confirmado_em).length;
+  const proximaId = doses.find((d) => !d.confirmado_em && Date.parse(d.previsto_em) > agora.getTime())?.id;
+  const [prefixoUso, valorUso] = haQuantoTempo(ultimaInteracao, agora);
+  const emAlertas = vista === 'alertas';
 
   return (
-    <View style={{ gap: 16 }}>
-      <AlertasUrgentes alertas={urgentes} nomePaciente={nome ?? ''} onVisto={marcarVisto} />
-      <Cartao>
-        <Text style={estilos.nome}>{nome}</Text>
-        <Texto suave>Última vez que usou o app: {haQuantoTempo(ultimaInteracao, agora)}</Texto>
-        {!paciente?.usuario_id && (
-          <Texto>O celular de {nome} ainda não foi vinculado. Toque em “Vincular o celular”.</Texto>
-        )}
-      </Cartao>
+    <SafeAreaView style={{ flex: 1, backgroundColor: cores.fundo }}>
+      <ScrollView contentContainerStyle={estilos.conteudo}>
+        <View style={estilos.cabecalho}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={estilos.ola}>{emAlertas ? 'Alertas' : 'Olá!'}</Text>
+            <TituloPagina>{emAlertas ? `Avisos de ${nome}` : `${nome} hoje`}</TituloPagina>
+          </View>
+          <Avatar nome={nome} />
+        </View>
 
-      <Erro mensagem={erro} />
+        <Erro mensagem={erro} />
 
-      {abertos.map((a) => (
-        <Cartao key={a.id} style={{ borderColor: NIVEIS[a.nivel].cor, borderWidth: 2, backgroundColor: NIVEIS[a.nivel].fundo }}>
-          <Selo texto={NIVEIS[a.nivel].rotulo} cor={NIVEIS[a.nivel].cor} fundo="#fff" />
-          <Text style={[estilos.motivo, { color: NIVEIS[a.nivel].cor }]}>{a.motivo}</Text>
-          <Texto suave>{horaCurta(a.criado_em)} · {haQuantoTempo(a.criado_em, agora)}</Texto>
-          <Botao titulo="Vi, estou cuidando" onPress={() => marcarVisto(a.id)} />
-        </Cartao>
-      ))}
+        {urgentes.map((a) => (
+          <CartaoUrgente key={a.id} alerta={a} onAbrir={() => setAlertaAberto(a.id)} />
+        ))}
 
-      <Cartao>
-        <Titulo>Remédios de hoje</Titulo>
-        {doses.length === 0 && <Texto suave>Nenhuma dose hoje. Cadastre os remédios e horários.</Texto>}
-        {doses.map((d) => {
-          const s = SITUACAO[situacaoDose(d, agora)];
-          return (
-            <View key={d.id} style={estilos.linhaDose}>
-              <Text style={estilos.hora}>{horaCurta(d.previsto_em)}</Text>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={estilos.remedio}>
-                  {d.horarios.remedios.nome}
-                  {d.horarios.remedios.critico ? ' · crítico' : ''}
-                </Text>
-                <Texto suave>{d.horarios.remedios.dose}</Texto>
-                <Selo texto={d.confirmado_em ? `Tomou às ${horaCurta(d.confirmado_em)}` : s.texto} cor={s.cor} fundo={s.fundo} />
-              </View>
-              {!d.confirmado_em && Date.parse(d.previsto_em) <= agora.getTime() && (
-                <Pressable onPress={() => confirmarPelaFamilia(d.id)} accessibilityRole="button">
-                  <Text style={estilos.link}>Marcar tomado</Text>
+        {emAlertas ? (
+          <Cartao style={{ paddingBottom: 8, gap: 0 }}>
+            <Titulo>Últimos alertas</Titulo>
+            {alertas.length === 0 && <Texto suave style={{ paddingVertical: 10 }}>Nenhum alerta ainda.</Texto>}
+            {alertas.map((a, i) => (
+              <View key={a.id}>
+                {i > 0 && <Divisor />}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${NIVEL[a.nivel]}: ${a.motivo}`}
+                  onPress={() => setAlertaAberto(a.id)}
+                  style={estilos.linhaAlerta}
+                >
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={[estilos.linhaTexto, !a.visto_em && { fontFamily: fontes.textoNegrito }]} numberOfLines={2}>
+                      {a.motivo}
+                    </Text>
+                    <Text style={estilos.hora}>{horaCurta(a.criado_em)} · {a.visto_em ? 'visto' : 'não visto'}</Text>
+                  </View>
+                  <Selo
+                    texto={NIVEL[a.nivel]}
+                    cor={a.nivel === 'vermelho' ? paleta.sobreTinta : a.nivel === 'informativo' ? paleta.textoSuave : paleta.alerta.texto}
+                    fundo={a.nivel === 'vermelho' ? paleta.alerta.forte : a.nivel === 'informativo' ? paleta.superficieNeutra : paleta.alerta.fundo}
+                  />
                 </Pressable>
+              </View>
+            ))}
+          </Cartao>
+        ) : (
+          <>
+            <View style={estilos.resumo}>
+              <View style={[estilos.blocoResumo, { backgroundColor: paleta.salvia.fundo }]}>
+                <Text style={[estilos.rotuloResumo, { color: paleta.salvia.texto }]}>Remédios tomados</Text>
+                <Text style={estilos.numero}>
+                  {tomadas}
+                  <Text style={[estilos.numeroMenor, { color: paleta.salvia.texto }]}> / {doses.length}</Text>
+                </Text>
+              </View>
+              <View style={[estilos.blocoResumo, { backgroundColor: paleta.lilas.fundo }]}>
+                <Text style={[estilos.rotuloResumo, { color: paleta.lilas.texto }]}>Último uso</Text>
+                <Text style={estilos.numero}>
+                  <Text style={[estilos.numeroMenor, { color: paleta.lilas.texto }]}>{prefixoUso}</Text>
+                  {valorUso}
+                </Text>
+              </View>
+            </View>
+
+            {!paciente?.usuario_id && (
+              <Cartao>
+                <Texto>O celular de {nome} ainda não foi vinculado.</Texto>
+                <Botao variante="secundario" titulo="Vincular o celular" onPress={() => router.push('/vincular')} />
+              </Cartao>
+            )}
+
+            {abertos.map((a) => (
+              <Pressable
+                key={a.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${NIVEL[a.nivel]}: ${a.motivo}`}
+                onPress={() => setAlertaAberto(a.id)}
+                style={estilos.aviso}
+              >
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text style={estilos.rotuloAviso}>{NIVEL[a.nivel].toUpperCase()} · {horaCurta(a.criado_em)}</Text>
+                  <Text style={estilos.textoAviso}>{a.motivo}</Text>
+                </View>
+              </Pressable>
+            ))}
+
+            <Cartao style={{ paddingBottom: 8, gap: 0 }}>
+              <Titulo>Remédios de hoje</Titulo>
+              {doses.length === 0 && (
+                <Texto suave style={{ paddingVertical: 10 }}>
+                  Nenhuma dose hoje. Cadastre os remédios e horários.
+                </Texto>
               )}
-            </View>
-          );
-        })}
-      </Cartao>
+              {doses.map((d, i) => {
+                const proximo = d.id === proximaId;
+                const s = proximo ? PROXIMO : SITUACAO[situacaoDose(d, agora)];
+                const pendenteVencida = !d.confirmado_em && Date.parse(d.previsto_em) <= agora.getTime();
+                return (
+                  <View key={d.id}>
+                    {i > 0 && <Divisor />}
+                    <View style={estilos.linhaDose}>
+                      <Text style={[estilos.hora, proximo && estilos.forte]}>{horaCurta(d.previsto_em)}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[estilos.linhaTexto, proximo && estilos.forte]}>
+                          {d.horarios.remedios.nome}
+                          {d.horarios.remedios.critico ? ' · crítico' : ''}
+                        </Text>
+                        {pendenteVencida && (
+                          <Pressable onPress={() => confirmarPelaFamilia(d.id)} accessibilityRole="button" hitSlop={8}>
+                            <Text style={estilos.link}>Marcar tomado</Text>
+                          </Pressable>
+                        )}
+                      </View>
+                      <Selo texto={d.confirmado_em ? `Tomou ${horaCurta(d.confirmado_em)}` : s.texto} cor={s.cor} fundo={s.fundo} />
+                    </View>
+                  </View>
+                );
+              })}
+            </Cartao>
 
-      <CheckinDiario ultimo={ultimoCheckin} agora={agora} />
-
-      <View style={{ gap: 10 }}>
-        <Botao titulo="Remédios e horários" onPress={() => router.push('/remedios')} />
-        <Botao variante="secundario" titulo="Vincular o celular" onPress={() => router.push('/vincular')} />
-      </View>
-
-      {vistos.length > 0 && (
-        <Cartao>
-          <Titulo>Alertas recentes</Titulo>
-          {vistos.map((a) => (
-            <View key={a.id} style={{ gap: 2 }}>
-              <Text style={{ color: NIVEIS[a.nivel].cor, fontWeight: '700' }}>{NIVEIS[a.nivel].rotulo}</Text>
-              <Texto>{a.motivo}</Texto>
-              <Texto suave>{haQuantoTempo(a.criado_em, agora)} · visto</Texto>
-            </View>
-          ))}
-        </Cartao>
-      )}
-    </View>
+            <CartaoUltimoCheckin ultimo={ultimoCheckin} agora={agora} />
+          </>
+        )}
+      </ScrollView>
+      <BarraNavegacao ativa={emAlertas ? 'alertas' : 'hoje'} alertasNovos={naoVistos} />
+    </SafeAreaView>
   );
 }
 
-function BotaoSair() {
-  return <Botao variante="secundario" titulo="Sair" onPress={() => supabase.auth.signOut()} />;
-}
-
 const estilos = StyleSheet.create({
-  conteudo: { padding: 16, gap: 16, maxWidth: 640, width: '100%', alignSelf: 'center', paddingBottom: 48 },
-  nome: { fontSize: 24, fontWeight: '800', color: cores.texto },
-  motivo: { fontSize: 18, fontWeight: '700' },
-  linhaDose: {
-    flexDirection: 'row',
+  conteudo: {
+    padding: espacos.margemTelaFamilia,
+    paddingTop: 24,
     gap: 12,
-    alignItems: 'flex-start',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: cores.borda,
+    maxWidth: 640,
+    width: '100%',
+    alignSelf: 'center',
+    paddingBottom: ESPACO_BARRA + 24,
   },
-  hora: { fontSize: 18, fontWeight: '800', color: cores.texto, width: 56 },
-  remedio: { fontSize: 16, fontWeight: '700', color: cores.texto },
-  link: { color: cores.primaria, fontWeight: '700', fontSize: 15, paddingVertical: 4 },
+  cabecalho: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, gap: 12 },
+  ola: { fontFamily: fontes.texto, fontSize: 15, color: paleta.textoSuave },
+  resumo: { flexDirection: 'row', gap: 12 },
+  blocoResumo: { flex: 1, borderRadius: 26, paddingVertical: 14, paddingHorizontal: 16, gap: 4 },
+  rotuloResumo: { fontFamily: fontes.texto, fontSize: 15 },
+  numero: { fontFamily: fontes.destaque, fontSize: 34, lineHeight: 38, color: paleta.tinta },
+  numeroMenor: { fontSize: 22 },
+  aviso: { backgroundColor: paleta.alerta.fundo, borderRadius: 26, paddingVertical: 14, paddingHorizontal: 18 },
+  rotuloAviso: { fontFamily: fontes.textoNegrito, fontSize: 13, letterSpacing: 0.78, color: paleta.alerta.texto },
+  textoAviso: { fontFamily: fontes.destaque, fontSize: 18, lineHeight: 23, color: paleta.alerta.escuro },
+  linhaDose: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingVertical: 6 },
+  linhaAlerta: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingVertical: 8 },
+  hora: { width: 46, fontFamily: fontes.texto, fontSize: 15, color: paleta.textoSuave },
+  linhaTexto: { fontFamily: fontes.texto, fontSize: 16, color: paleta.tinta },
+  forte: { fontFamily: fontes.textoNegrito, color: paleta.tinta },
+  link: { fontFamily: fontes.textoNegrito, fontSize: 14, color: paleta.tinta, textDecorationLine: 'underline', paddingTop: 2 },
 });

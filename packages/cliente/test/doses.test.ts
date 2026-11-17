@@ -79,3 +79,24 @@ test('lê horários digitados pela família', () => {
   assert.equal(lerHora('25:00'), null);
   assert.equal(lerHora('meio-dia'), null);
 });
+
+import { dataCurta } from '../src/formato.ts';
+
+test('data curta em português, sem "-feira"', () => {
+  assert.equal(dataCurta(new Date('2026-11-20T12:00:00Z')), 'Sexta, 20 de novembro');
+  assert.equal(dataCurta(new Date('2026-11-22T12:00:00Z')), 'Domingo, 22 de novembro');
+});
+
+import { dividirMotivo } from '../src/formato.ts';
+
+test('motivo do alerta vira título e explicação', () => {
+  assert.deepEqual(dividirMotivo('Febre ou calafrio (38,2 °C). Em tratamento de leucemia, procurar o médico.'), {
+    titulo: 'Febre ou calafrio (38,2 °C)',
+    detalhe: 'Em tratamento de leucemia, procurar o médico.',
+  });
+  assert.deepEqual(dividirMotivo('Relatou uma queda.'), { titulo: 'Relatou uma queda', detalhe: null });
+  assert.deepEqual(dividirMotivo('Não confirmou Remédio A (oral) há mais de 1 hora.'), {
+    titulo: 'Não confirmou Remédio A (oral) há mais de 1 hora',
+    detalhe: null,
+  });
+});

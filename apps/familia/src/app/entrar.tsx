@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from 'react-native';
 import { Botao, Campo, Cartao, cores, Erro, Texto } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
+import { fontes, paleta } from '@/lib/tema';
 
 export default function Entrar() {
   const [email, setEmail] = useState('');
@@ -60,7 +61,7 @@ export default function Entrar() {
             onSubmitEditing={enviar}
           />
           <Erro mensagem={erro} />
-          {aviso && <Text style={{ color: cores.sucesso, fontSize: 15 }}>{aviso}</Text>}
+          {aviso && <Text style={{ color: paleta.salvia.texto, fontSize: 15, fontFamily: fontes.texto }}>{aviso}</Text>}
           <Botao titulo={modo === 'entrar' ? 'Entrar' : 'Criar conta'} onPress={enviar} carregando={enviando} />
           <Botao
             variante="secundario"
@@ -75,5 +76,5 @@ export default function Entrar() {
 
 const estilos = StyleSheet.create({
   conteudo: { padding: 20, gap: 16, maxWidth: 480, width: '100%', alignSelf: 'center', paddingTop: 64 },
-  marca: { fontSize: 32, fontWeight: '800', color: cores.primaria },
+  marca: { fontSize: 34, fontFamily: fontes.destaque, color: cores.texto, letterSpacing: -0.3 },
 });

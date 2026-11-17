@@ -4,6 +4,7 @@ import QRCode from 'react-native-qrcode-svg';
 import { Botao, Cartao, cores, Erro, Texto, Titulo } from '@/components/ui';
 import { usePaciente } from '@/lib/paciente';
 import { supabase } from '@/lib/supabase';
+import { fontes, paleta } from '@/lib/tema';
 
 const VALIDADE_MS = 15 * 60_000; // igual ao padrão de codigos_vinculo.expira_em
 
@@ -51,7 +52,7 @@ export default function Vincular() {
           números.{'\n'}3. Pronto: os alarmes e a Lia passam a funcionar sozinhos.
         </Texto>
         {paciente.usuario_id && (
-          <Text style={{ color: cores.sucesso, fontWeight: '700', fontSize: 16 }}>
+          <Text style={{ color: paleta.salvia.texto, fontFamily: fontes.textoNegrito, fontSize: 16 }}>
             ✓ Já existe um celular vinculado. Um código novo troca para outro aparelho.
           </Text>
         )}
@@ -75,5 +76,5 @@ export default function Vincular() {
 const estilos = StyleSheet.create({
   conteudo: { padding: 16, gap: 16, maxWidth: 640, width: '100%', alignSelf: 'center' },
   qr: { alignItems: 'center', gap: 12, paddingVertical: 12 },
-  codigo: { fontSize: 40, fontWeight: '800', letterSpacing: 6, color: cores.texto },
+  codigo: { fontSize: 40, fontFamily: fontes.destaque, letterSpacing: 6, color: cores.texto },
 });

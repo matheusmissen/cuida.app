@@ -25,6 +25,15 @@ export function lerHora(texto: string): string | null {
   return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
 }
 
+/** 'Quinta, 20 de novembro' (dia da semana sem '-feira'), no horário de Brasília. */
+export function dataCurta(agora: Date): string {
+  const partes = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: FUSO })
+    .formatToParts(agora)
+    .reduce<Record<string, string>>((acc, p) => ({ ...acc, [p.type]: p.value }), {});
+  const dia = partes.weekday.replace('-feira', '');
+  return `${dia.charAt(0).toUpperCase()}${dia.slice(1)}, ${partes.day} de ${partes.month}`;
+}
+
 /** 'Bom dia', 'Boa tarde' ou 'Boa noite', no horário de Brasília. */
 export function saudacao(agora: Date): string {
   const h = Number(new Intl.DateTimeFormat('pt-BR', { hour: 'numeric', hourCycle: 'h23', timeZone: FUSO }).format(agora));
@@ -39,3 +48,15 @@ export const NIVEIS: Record<Nivel, { rotulo: string; cor: string; fundo: string 
   amarelo: { rotulo: 'Acompanhar', cor: '#8A6D00', fundo: '#FFF8D6' },
   informativo: { rotulo: 'Histórico', cor: '#475569', fundo: '#EEF2F6' },
 };
+
+/**
+ * Separa o motivo de um alerta em título curto e explicação, para a tela de alerta.
+ * 'Febre ou calafrio (38,2 °C). Em tratamento de leucemia, procurar o médico.' →
+ * { titulo: 'Febre ou calafrio (38,2 °C)', detalhe: 'Em tratamento de leucemia, procurar o médico.' }
+ */
+export function dividirMotivo(motivo: string): { titulo: string; detalhe: string | null } {
+  const texto = motivo.trim();
+  const i = texto.search(/\.\s+\S/);
+  if (i < 0) return { titulo: texto.replace(/\.$/, ''), detalhe: null };
+  return { titulo: texto.slice(0, i), detalhe: texto.slice(i + 1).trim() };
+}

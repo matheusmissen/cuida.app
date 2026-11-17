@@ -1,7 +1,8 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { tema } from '@/lib/tema';
+import { StyleSheet, View } from 'react-native';
+import { BotaoPrincipal, BotaoSecundario, Texto } from '@/components/ui';
+import { raios } from '@/lib/tema';
 
 /** Lê o QR code do app da família e devolve os 6 números. */
 export function LeitorQr({ onCodigo, onFechar }: { onCodigo: (codigo: string) => void; onFechar: () => void }) {
@@ -11,13 +12,9 @@ export function LeitorQr({ onCodigo, onFechar }: { onCodigo: (codigo: string) =>
   if (!permissao?.granted) {
     return (
       <View style={estilos.caixa}>
-        <Text style={estilos.texto}>Preciso usar a câmera para ler o código.</Text>
-        <Pressable style={estilos.botao} onPress={pedirPermissao} accessibilityRole="button">
-          <Text style={estilos.textoBotao}>Usar a câmera</Text>
-        </Pressable>
-        <Pressable style={estilos.voltar} onPress={onFechar} accessibilityRole="button">
-          <Text style={estilos.textoVoltar}>Digitar os números</Text>
-        </Pressable>
+        <Texto>Preciso usar a câmera para ler o código.</Texto>
+        <BotaoPrincipal titulo="Usar a câmera" onPress={pedirPermissao} />
+        <BotaoSecundario titulo="Digitar os números" onPress={onFechar} />
       </View>
     );
   }
@@ -36,25 +33,12 @@ export function LeitorQr({ onCodigo, onFechar }: { onCodigo: (codigo: string) =>
           }
         }}
       />
-      <Pressable style={estilos.voltar} onPress={onFechar} accessibilityRole="button">
-        <Text style={estilos.textoVoltar}>Digitar os números</Text>
-      </Pressable>
+      <BotaoSecundario titulo="Digitar os números" onPress={onFechar} />
     </View>
   );
 }
 
 const estilos = StyleSheet.create({
   caixa: { gap: 16 },
-  camera: { width: '100%', aspectRatio: 1, borderRadius: 16, overflow: 'hidden' },
-  texto: { fontSize: tema.letra.minima, color: tema.texto },
-  botao: {
-    minHeight: tema.botaoMin,
-    borderRadius: 16,
-    backgroundColor: tema.primaria,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textoBotao: { fontSize: tema.letra.media, color: '#fff', fontWeight: '800' },
-  voltar: { minHeight: tema.botaoMin, alignItems: 'center', justifyContent: 'center' },
-  textoVoltar: { fontSize: tema.letra.minima, color: tema.primaria, fontWeight: '700' },
+  camera: { width: '100%', aspectRatio: 1, borderRadius: raios.cartao, overflow: 'hidden' },
 });
