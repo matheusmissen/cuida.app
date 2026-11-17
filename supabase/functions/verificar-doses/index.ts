@@ -4,7 +4,8 @@
 // 3. Alertas laranja não vistos: avisa o próximo da escala a cada 30 min.
 // 4. Nenhuma interação do aparelho do idoso em 24 h: alerta vermelho (uma vez por silêncio).
 // 5. Check-in diário sem resposta após 2 tentativas em 1 h: alerta laranja (uma vez por dia).
-// Só aceita a service role (o cron); os apps nunca chamam esta função.
+// Só aceita chave de servidor (o cron): service_role antiga ou chave secreta nova (_shared/autorizacao.ts).
+// Os apps nunca chamam esta função.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { aplicarRegraDoPaciente, planejarDoses, type DoseLinha, type RegraPaciente } from '../_shared/doses.ts';
@@ -13,15 +14,27 @@ import { proximosDaEscala } from '../_shared/escala.ts';
 import { carregarCuidadores, criarEAvisar, nomeDoPaciente } from '../_shared/alertar.ts';
 import { enviarPush, mensagensPush } from '../_shared/push.ts';
 import { pacientesEmSilencio } from '../_shared/silencio.ts';
+import { autorizadoComoServidor, chavesDeServidor, credenciaisRecebidas, tipoDaChave } from '../_shared/autorizacao.ts';
 
 const HORA = 60 * 60_000;
 
 Deno.serve(async (req) => {
-  const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!serviceRole || req.headers.get('Authorization') !== `Bearer ${serviceRole}`) {
+  const chaves = chavesDeServidor({
+    serviceRole: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+    secretKeysJson: Deno.env.get('SUPABASE_SECRET_KEYS'),
+  });
+  const recebidas = credenciaisRecebidas({
+    authorization: req.headers.get('Authorization'),
+    apikey: req.headers.get('apikey'),
+  });
+  if (!autorizadoComoServidor(recebidas, chaves)) {
+    console.warn('verificar-doses: não autorizado', {
+      recebidas: recebidas.map(tipoDaChave),
+      esperadas: chaves.map(tipoDaChave),
+    });
     return new Response('Não autorizado', { status: 401 });
   }
-  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, serviceRole, {
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, chaves[0], {
     auth: { persistSession: false },
   });
   const agora = new Date();

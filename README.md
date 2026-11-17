@@ -94,12 +94,17 @@ Na web, o alarme aparece como modal em tela cheia na própria página.
 ### Agendamentos no Supabase hospedado
 
 A migration cria dois jobs no `pg_cron`: `gerar-doses` (diário) e `verificar-doses` (a cada 5 min, chama a
-Edge Function). A URL e a service role ficam no Vault, fora do repositório:
+Edge Function). A URL e a chave de servidor ficam no Vault, fora do repositório:
 
 ```sql
 select vault.create_secret('https://<projeto>.supabase.co', 'project_url');
-select vault.create_secret('<service role key>', 'service_role_key');
+select vault.create_secret('<chave secreta sb_secret_...>', 'service_role_key');
 ```
+
+Use a **chave secreta nova** (Settings → API Keys → Secret keys → `default`, começa com `sb_secret_`).
+Projetos novos do Supabase injetam nas Edge Functions só as chaves nesse formato, então a service_role antiga
+(`eyJ...`) é recusada pela `verificar-doses`. Projetos antigos ainda podem usar a service_role: a função aceita as
+duas (`supabase/functions/_shared/autorizacao.ts`). O nome do segredo no Vault continua `service_role_key`.
 
 Ligue também o login anônimo (Authentication → Sign In / Providers → Anonymous) para o app do idoso.
 
