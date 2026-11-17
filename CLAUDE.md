@@ -123,7 +123,7 @@ Se apertar, cortar primeiro o alerta por silêncio de 24 h e o painel do dia com
 ## Estado atual (etapas 18–21/11 e 22–25/11 concluídas)
 
 Pronto e testado:
-- `packages/regras`: motor de regras de alerta em TypeScript puro, sem dependências, com 27 testes. Use estas funções nas Edge Functions; não reimplemente as regras.
+- `packages/regras`: motor de regras de alerta em TypeScript puro, sem dependências, com 36 testes. Use estas funções nas Edge Functions; não reimplemente as regras.
 - `packages/cliente`: cliente Supabase (só chave anon), tipos das tabelas e utilitários de doses (usam `avaliarDose`), com testes.
 - `supabase/migrations`: esquema com RLS; `criar_paciente`, `gerar_codigo_vinculo`, `vincular_aparelho`, `registrar_interacao`, `gerar_doses_dia`, `gerar_doses_hoje`, `confirmar_dose`; realtime de alertas/doses; pg_cron (URL e chave no Vault). Validado em Postgres 16 com `supabase/tests/rls_manual.sql` e `doses_manual.sql`.
 - `supabase/functions/verificar-doses`: realarme (30 min), alerta de dose perdida (60 min), escala laranja e push. Lógica pura em `_shared/` com testes em Node (`npm test`). `_shared/alertar.ts` (`criarEAvisar`) deve ser reutilizado pelas próximas funções.
