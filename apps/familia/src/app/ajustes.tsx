@@ -1,4 +1,12 @@
 import { condicoesParaSalvar } from '@cuida/cliente';
+import {
+  emModoDemonstracao,
+  minutosPorExtenso,
+  TEMPOS_DEMONSTRACAO,
+  TEMPOS_PADRAO,
+  temposDoPaciente,
+  type Tempos,
+} from '@cuida/regras';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -19,6 +27,7 @@ export default function Ajustes() {
       <ScrollView contentContainerStyle={estilos.conteudo}>
         <TituloPagina style={{ paddingHorizontal: 4 }}>Ajustes</TituloPagina>
         {paciente && <HorarioCheckin />}
+        {paciente && <TemposDosAvisos />}
         {paciente && <CondicoesDoPaciente />}
         {paciente && (
           <Cartao>
@@ -36,6 +45,59 @@ export default function Ajustes() {
       </ScrollView>
       <BarraNavegacao ativa="ajustes" />
     </SafeAreaView>
+  );
+}
+
+const colunasDosTempos = (t: Tempos) => ({
+  tolerancia_dose_min: t.toleranciaDoseMin,
+  tolerancia_checkin_min: t.toleranciaCheckinMin,
+  escalada_min: t.escaladaMin,
+});
+
+/**
+ * Tempos de tolerância e escalada (docs/PRD.md). O modo demonstração põe tudo em 1 minuto,
+ * para mostrar dose não confirmada → aviso ao responsável → alerta ao grupo na apresentação.
+ */
+function TemposDosAvisos() {
+  const { paciente, recarregar } = usePaciente();
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  if (!paciente) return null;
+  const tempos = temposDoPaciente(paciente);
+  const demonstracao = emModoDemonstracao(tempos);
+
+  async function trocar() {
+    if (!paciente) return;
+    setErro(null);
+    setSalvando(true);
+    const novos = demonstracao ? TEMPOS_PADRAO : TEMPOS_DEMONSTRACAO;
+    const { error } = await supabase.from('pacientes').update(colunasDosTempos(novos)).eq('id', paciente.id);
+    setSalvando(false);
+    if (error) return setErro(error.message);
+    await recarregar();
+  }
+
+  return (
+    <Cartao>
+      <Titulo>Tempos dos avisos</Titulo>
+      {demonstracao && <Texto>Modo demonstração ligado: todos os tempos estão em 1 minuto.</Texto>}
+      <Texto suave>
+        Remédio sem "Tomei" em {minutosPorExtenso(tempos.toleranciaDoseMin)}: o responsável principal é avisado.
+      </Texto>
+      <Texto suave>
+        Check-in sem resposta em {minutosPorExtenso(tempos.toleranciaCheckinMin)}: o responsável principal é avisado.
+      </Texto>
+      <Texto suave>
+        Se o responsável não agir em {minutosPorExtenso(tempos.escaladaMin)}, o aviso vai para todo o grupo.
+      </Texto>
+      <Erro mensagem={erro} />
+      <Botao
+        variante="secundario"
+        titulo={demonstracao ? 'Voltar aos tempos normais' : 'Ligar modo demonstração (1 minuto)'}
+        onPress={trocar}
+        carregando={salvando}
+      />
+    </Cartao>
   );
 }
 

@@ -14,6 +14,7 @@ import {
   diasSeguidos,
   nivelMaximo,
   pedidoDeAjuda,
+  TEMPOS_DEMONSTRACAO,
 } from '../src/index.ts';
 import type { Checkin, ConfigPaciente } from '../src/index.ts';
 
@@ -122,25 +123,29 @@ describe('doses', () => {
   const em = (hhmm: string) => new Date(`2026-11-20T${hhmm}:00-03:00`);
   const dose = { previstoEm: previsto, critico: false, nomeRemedio: 'Remédio A' };
 
-  it('dentro de 30 minutos não faz nada', () => {
+  it('antes de 30 minutos não faz nada', () => {
     assert.deepEqual(avaliarDose(dose, em('08:29')), { acao: 'nenhuma' });
   });
 
-  it('aos 30 minutos toca o alarme de novo', () => {
-    assert.deepEqual(avaliarDose(dose, em('08:30')), { acao: 'realarmar' });
-  });
-
-  it('aos 60 minutos alerta em laranja', () => {
-    const r = avaliarDose(dose, em('09:00'));
-    assert.equal(r.acao, 'alertar');
-    if (r.acao === 'alertar') assert.equal(r.alerta.nivel, 'laranja');
-  });
-
-  it('remédio crítico perdido alerta em vermelho', () => {
-    const r = avaliarDose({ ...dose, critico: true }, em('09:00'));
+  it('aos 30 minutos sem "Tomei": alerta laranja (responsável primeiro, depois o grupo)', () => {
+    const r = avaliarDose(dose, em('08:30'));
     if (r.acao !== 'alertar') assert.fail('deveria alertar');
-    assert.equal(r.alerta.nivel, 'vermelho');
-    assert.equal(r.alerta.gatilho, 'dose.critica_perdida');
+    assert.equal(r.alerta.nivel, 'laranja');
+    assert.equal(r.alerta.gatilho, 'dose.nao_confirmada');
+    assert.equal(r.alerta.motivo, 'Não confirmou Remédio A em 30 minutos.');
+  });
+
+  it('remédio crítico segue a mesma escalada (laranja)', () => {
+    const r = avaliarDose({ ...dose, critico: true }, em('08:30'));
+    if (r.acao !== 'alertar') assert.fail('deveria alertar');
+    assert.equal(r.alerta.nivel, 'laranja');
+  });
+
+  it('modo demonstração: alerta com 1 minuto', () => {
+    assert.deepEqual(avaliarDose(dose, new Date(Date.parse(previsto) + 59_000), TEMPOS_DEMONSTRACAO), { acao: 'nenhuma' });
+    const r = avaliarDose(dose, em('08:01'), TEMPOS_DEMONSTRACAO);
+    if (r.acao !== 'alertar') assert.fail('deveria alertar');
+    assert.equal(r.alerta.motivo, 'Não confirmou Remédio A em 1 minuto.');
   });
 
   it('dose confirmada nunca alerta', () => {
@@ -155,9 +160,11 @@ describe('silêncio, check-in sem resposta, ajuda e estoque', () => {
     assert.equal(avaliarSilencio(ultima, new Date('2026-11-20T10:00:00-03:00'))?.nivel, 'vermelho');
   });
 
-  it('check-in sem resposta após 2 tentativas é laranja', () => {
-    assert.equal(avaliarCheckinSemResposta(1), null);
-    assert.equal(avaliarCheckinSemResposta(2)?.nivel, 'laranja');
+  it('check-in sem resposta: laranja a partir de 15 minutos (ou do tempo configurado)', () => {
+    assert.equal(avaliarCheckinSemResposta(14), null);
+    assert.equal(avaliarCheckinSemResposta(15)?.nivel, 'laranja');
+    assert.equal(avaliarCheckinSemResposta(0, TEMPOS_DEMONSTRACAO), null);
+    assert.equal(avaliarCheckinSemResposta(1, TEMPOS_DEMONSTRACAO)?.motivo, 'Não fez o check-in em 1 minuto.');
   });
 
   it('botão de ajuda é sempre vermelho', () => {

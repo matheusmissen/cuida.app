@@ -1,14 +1,14 @@
 // Decide o que fazer com as doses atrasadas. Quem decide é o motor de regras
-// (packages/regras, avaliarDose); aqui só aplicamos a configuração do paciente.
+// (packages/regras, avaliarDose); aqui só aplicamos a configuração do paciente
+// (tempos de tolerância e regras da família).
 
-import { avaliarDose, type Alerta, type Nivel } from '../../../packages/regras/src/index.ts';
+import { avaliarDose, TEMPOS_PADRAO, type Alerta, type Nivel, type Tempos } from '../../../packages/regras/src/index.ts';
 
 export interface DoseLinha {
   id: string;
   pacienteId: string;
   previstoEm: string;
   confirmadoEm: string | null;
-  realarmadoEm: string | null;
   critico: boolean;
   nomeRemedio: string;
 }
@@ -30,9 +30,7 @@ export interface DosePerdida {
 }
 
 export interface PlanoDoses {
-  /** Doses que devem tocar o alarme de novo (30 min sem confirmação). */
-  realarmar: string[];
-  /** Doses que viram alerta para a família (60 min sem confirmação). */
+  /** Doses que viram alerta para a família (sem "Tomei" até a tolerância do paciente). */
   perdidas: DosePerdida[];
 }
 
@@ -53,8 +51,16 @@ export function aplicarRegraDoPaciente(
   return { alerta: { ...alerta, nivel }, regraId: regra.id };
 }
 
-export function planejarDoses(doses: DoseLinha[], regras: RegraPaciente[], agora: Date): PlanoDoses {
-  const plano: PlanoDoses = { realarmar: [], perdidas: [] };
+/**
+ * @param tempos paciente_id → tempos do paciente (sem entrada: padrão do PRD, 30 min)
+ */
+export function planejarDoses(
+  doses: DoseLinha[],
+  regras: RegraPaciente[],
+  agora: Date,
+  tempos: Map<string, Tempos> = new Map(),
+): PlanoDoses {
+  const plano: PlanoDoses = { perdidas: [] };
   for (const dose of doses) {
     const acao = avaliarDose(
       {
@@ -64,14 +70,12 @@ export function planejarDoses(doses: DoseLinha[], regras: RegraPaciente[], agora
         nomeRemedio: dose.nomeRemedio,
       },
       agora,
+      tempos.get(dose.pacienteId) ?? TEMPOS_PADRAO,
     );
-    if (acao.acao === 'realarmar' && !dose.realarmadoEm) {
-      plano.realarmar.push(dose.id);
-    } else if (acao.acao === 'alertar') {
-      const regra = regras.find((r) => r.pacienteId === dose.pacienteId && r.gatilho === acao.alerta.gatilho);
-      const { alerta, regraId } = aplicarRegraDoPaciente(acao.alerta, regra);
-      plano.perdidas.push({ doseId: dose.id, pacienteId: dose.pacienteId, alerta, regraId });
-    }
+    if (acao.acao !== 'alertar') continue;
+    const regra = regras.find((r) => r.pacienteId === dose.pacienteId && r.gatilho === acao.alerta.gatilho);
+    const { alerta, regraId } = aplicarRegraDoPaciente(acao.alerta, regra);
+    plano.perdidas.push({ doseId: dose.id, pacienteId: dose.pacienteId, alerta, regraId });
   }
   return plano;
 }

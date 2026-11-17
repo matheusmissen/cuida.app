@@ -2,6 +2,7 @@
 // Princípio: na dúvida, a regra sobe de nível. Um alerta falso custa um telefonema;
 // um alerta perdido pode custar uma internação.
 
+import { minutosPorExtenso, TEMPOS_PADRAO, type Tempos } from './tempos.ts';
 import type { AcaoDose, Alerta, Checkin, ConfigPaciente, Dose, Nivel } from './tipos.ts';
 
 export const LIMITE_FEBRE_PADRAO = 37.8;
@@ -140,24 +141,24 @@ export function avaliarCheckin(
 }
 
 /**
- * Decide o que fazer com uma dose.
- * 30 min sem confirmação: toca o alarme de novo. 60 min: alerta (vermelho se o remédio for crítico).
+ * Decide o que fazer com uma dose (docs/PRD.md, seção 5).
+ * Sem "Tomei" até a tolerância (padrão 30 min): alerta crítico, que vai primeiro ao responsável
+ * principal e, se ele não agir, a todo o grupo (nível laranja = com escalada).
+ * O remédio "crítico" não muda mais o nível: no PRD toda dose não confirmada segue a mesma escalada.
+ * A família ainda pode subir o nível pela tabela `regras` (gatilho 'dose.nao_confirmada').
  */
-export function avaliarDose(dose: Dose, agora: Date): AcaoDose {
+export function avaliarDose(dose: Dose, agora: Date, tempos: Tempos = TEMPOS_PADRAO): AcaoDose {
   if (dose.confirmadoEm) return { acao: 'nenhuma' };
   const atraso = agora.getTime() - Date.parse(dose.previstoEm);
-  if (atraso >= HORA) {
-    return {
-      acao: 'alertar',
-      alerta: {
-        nivel: dose.critico ? 'vermelho' : 'laranja',
-        gatilho: dose.critico ? 'dose.critica_perdida' : 'dose.perdida',
-        motivo: `Não confirmou ${dose.nomeRemedio} há mais de 1 hora.`,
-      },
-    };
-  }
-  if (atraso >= 30 * MINUTO) return { acao: 'realarmar' };
-  return { acao: 'nenhuma' };
+  if (atraso < tempos.toleranciaDoseMin * MINUTO) return { acao: 'nenhuma' };
+  return {
+    acao: 'alertar',
+    alerta: {
+      nivel: 'laranja',
+      gatilho: 'dose.nao_confirmada',
+      motivo: `Não confirmou ${dose.nomeRemedio} em ${minutosPorExtenso(tempos.toleranciaDoseMin)}.`,
+    },
+  };
 }
 
 /** Nenhuma interação com o app em 24 horas. */
@@ -171,13 +172,16 @@ export function avaliarSilencio(ultimaInteracaoEm: string, agora: Date): Alerta 
   };
 }
 
-/** Check-in sem resposta após 2 tentativas. */
-export function avaliarCheckinSemResposta(tentativasSemResposta: number): Alerta | null {
-  if (tentativasSemResposta < 2) return null;
+/**
+ * Check-in sem resposta (docs/PRD.md, seção 4): passou a tolerância (padrão 15 min) depois do
+ * horário e não houve check-in → alerta crítico com escalada (laranja).
+ */
+export function avaliarCheckinSemResposta(minutosSemResposta: number, tempos: Tempos = TEMPOS_PADRAO): Alerta | null {
+  if (minutosSemResposta < tempos.toleranciaCheckinMin) return null;
   return {
     nivel: 'laranja',
     gatilho: 'geral.checkin_sem_resposta',
-    motivo: 'Não respondeu ao check-in após 2 tentativas.',
+    motivo: `Não fez o check-in em ${minutosPorExtenso(tempos.toleranciaCheckinMin)}.`,
   };
 }
 

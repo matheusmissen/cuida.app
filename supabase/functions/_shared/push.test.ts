@@ -5,7 +5,7 @@ import type { Cuidador } from './escala.ts';
 
 const comToken: Cuidador = { usuarioId: 'a', papel: 'principal', ordemEscala: 1, pushToken: 'ExponentPushToken[a]' };
 const semToken: Cuidador = { usuarioId: 'b', papel: 'apoio', ordemEscala: 2, pushToken: null };
-const alerta = { nivel: 'vermelho' as const, gatilho: 'dose.critica_perdida', motivo: 'Não confirmou Remédio A há mais de 1 hora.' };
+const alerta = { nivel: 'vermelho' as const, gatilho: 'dose.nao_confirmada', motivo: 'Não confirmou Remédio A há mais de 1 hora.' };
 
 test('push só para quem tem token, com prioridade alta no vermelho', () => {
   const msgs = mensagensPush(alerta, 'al1', 'Dona Maria', [comToken, semToken]);

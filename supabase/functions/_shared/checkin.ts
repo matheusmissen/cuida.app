@@ -1,13 +1,15 @@
 // Check-in diário sem resposta: a decisão é do motor de regras (situacaoDoCheckin →
 // avaliarCheckinSemResposta); aqui só se evita repetir o aviso no mesmo dia.
 
-import { dataLocal, situacaoDoCheckin, type Alerta } from '../../../packages/regras/src/index.ts';
+import { dataLocal, situacaoDoCheckin, type Alerta, type Tempos } from '../../../packages/regras/src/index.ts';
 
 export interface PacienteCheckin {
   id: string;
   /** 'HH:MM:SS' (Postgres time) ou null quando a família desligou o check-in. */
   horarioCheckin: string | null;
   ultimoCheckinEm: string | null;
+  /** Tempos do paciente (sem valor: padrão do PRD, 15 min). */
+  tempos?: Tempos;
 }
 
 export interface CheckinSemResposta {
@@ -29,7 +31,7 @@ export function checkinsSemResposta(
     if (!p.horarioCheckin) continue;
     let situacao;
     try {
-      situacao = situacaoDoCheckin(p.horarioCheckin, agora, p.ultimoCheckinEm);
+      situacao = situacaoDoCheckin(p.horarioCheckin, agora, p.ultimoCheckinEm, p.tempos);
     } catch (erro) {
       console.error('checkin: horário inválido', p.id, erro instanceof Error ? erro.message : erro);
       continue;

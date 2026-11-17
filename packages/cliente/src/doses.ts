@@ -1,13 +1,16 @@
 // Utilitários puros sobre doses (sem React Native): testados em Node.
-import { avaliarDose } from '@cuida/regras';
+import { avaliarDose, TEMPOS_PADRAO, type Tempos } from '@cuida/regras';
 import type { DoseComRemedio } from './tipos.ts';
 
 const MINUTO = 60_000;
 
-export type SituacaoDose = 'tomada' | 'perdida' | 'atrasada' | 'agora' | 'futura';
+export type SituacaoDose = 'tomada' | 'perdida' | 'agora' | 'futura';
 
-/** Situação da dose para mostrar na tela, decidida pelo motor de regras. */
-export function situacaoDose(dose: DoseComRemedio, agora: Date): SituacaoDose {
+/**
+ * Situação da dose para mostrar na tela, decidida pelo motor de regras.
+ * 'perdida' = passou a tolerância sem "Tomei" (a família foi avisada).
+ */
+export function situacaoDose(dose: DoseComRemedio, agora: Date, tempos: Tempos = TEMPOS_PADRAO): SituacaoDose {
   if (dose.confirmado_em) return 'tomada';
   if (dose.status === 'perdido') return 'perdida';
   const acao = avaliarDose(
@@ -18,9 +21,9 @@ export function situacaoDose(dose: DoseComRemedio, agora: Date): SituacaoDose {
       nomeRemedio: dose.horarios.remedios.nome,
     },
     agora,
+    tempos,
   );
   if (acao.acao === 'alertar') return 'perdida';
-  if (acao.acao === 'realarmar') return 'atrasada';
   return Date.parse(dose.previsto_em) <= agora.getTime() ? 'agora' : 'futura';
 }
 
@@ -48,8 +51,11 @@ export function proximaDose(doses: DoseComRemedio[], agora: Date): DoseComRemedi
   );
 }
 
-/** O alarme deve tocar de novo? (30 min sem confirmação, pelo motor de regras.) */
-export function deveRealarmar(dose: DoseComRemedio, agora: Date): boolean {
+/**
+ * O alarme deve falar de novo? Quando passa a tolerância sem "Tomei" (a família acaba de ser
+ * avisada) ou quando o servidor marcou a dose para tocar de novo.
+ */
+export function deveRealarmar(dose: DoseComRemedio, agora: Date, tempos: Tempos = TEMPOS_PADRAO): boolean {
   const acao = avaliarDose(
     {
       previstoEm: dose.previsto_em,
@@ -58,8 +64,9 @@ export function deveRealarmar(dose: DoseComRemedio, agora: Date): boolean {
       nomeRemedio: dose.horarios.remedios.nome,
     },
     agora,
+    tempos,
   ).acao;
-  return acao === 'realarmar' || acao === 'alertar' || Boolean(dose.realarmado_em);
+  return acao === 'alertar' || Boolean(dose.realarmado_em);
 }
 
 /** Instantes em que o celular deve tocar: no horário e 30 min depois. Só os futuros. */

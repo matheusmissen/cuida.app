@@ -139,10 +139,12 @@ no Firefox o app do idoso mostra um campo de texto grande.
 2. O celular do idoso entra anonimamente e se vincula com o código (válido por 15 min, uso único).
 3. As doses do dia são geradas no servidor (horário de Brasília). O celular agenda alarmes locais no horário
    e 30 min depois; a tela mostra o remédio em letra grande, a Lia lê em voz alta e há um botão "Tomei".
-4. Sem "Tomei": aos 30 min o alarme toca de novo; aos 60 min a Edge Function `verificar-doses` cria um
-   alerta laranja (vermelho se o remédio for crítico) e manda push. Laranja sem resposta em 30 min vai
-   para o próximo da escala.
-5. Nenhuma interação do celular do idoso em 24 h: a `verificar-doses` cria um alerta vermelho (uma vez por silêncio).
+4. Sem "Tomei" em 30 min, a Edge Function `verificar-doses` (agendada a cada minuto) cria um alerta laranja
+   para o responsável principal e manda push. Se ele não agir em 15 min (marcar o alerta como visto),
+   o aviso vai para todo o grupo de uma vez.
+5. Os tempos ficam em `pacientes` (`tolerancia_dose_min`, `tolerancia_checkin_min`, `escalada_min`). Em
+   Ajustes, no app da família, "Ligar modo demonstração" põe tudo em 1 minuto para a apresentação.
+6. Nenhuma interação do celular do idoso em 24 h: a `verificar-doses` cria um alerta vermelho (uma vez por silêncio).
 
 ## Conversa com a Lia (Edge Function `agente`)
 
@@ -188,14 +190,14 @@ Toques repetidos em 2 minutos reaproveitam o mesmo alerta. Teste do banco: `supa
 
 ## Check-in diário (etapa 22–25/11)
 
-- A família define o horário no painel (padrão 09:00; pode desligar).
+- A família define o horário no painel (padrão 08:00; pode desligar).
 - No horário, a Lia chama no app do idoso ("Vamos conversar um pouquinho? Como está se sentindo hoje?") e
-  repete 30 min depois. No celular também toca um lembrete local. Se o alarme de remédio estiver aberto, o
+  fica esperando a resposta. No celular também toca um lembrete local. Se o alarme de remédio estiver aberto, o
   check-in espera o "Tomei".
 - A resposta vai para o agente, que registra o check-in e aplica as regras (por exemplo, "tô quentinha" →
   febre → alerta vermelho).
-- Sem check-in 1 h depois do horário (2 tentativas), o servidor cria um alerta laranja para o responsável
-  principal. A conta é `situacaoDoCheckin`, em `packages/regras`, usada pelo servidor e pelo app.
+- Sem check-in 15 min depois do horário, o servidor cria um alerta laranja para o responsável
+  principal; se ele não agir em mais 15 min, o aviso vai para todo o grupo. A conta é `situacaoDoCheckin`, em `packages/regras`, usada pelo servidor e pelo app.
 - No app da família, o alerta vermelho aparece como uma faixa no topo do painel, com som ou vibração, até
   alguém tocar em "Vi, estou cuidando".
 
@@ -218,7 +220,7 @@ Publicar: `supabase functions deploy ler-receita`. Teste do banco: `supabase/tes
 | Nível | Exemplos | Quem é avisado |
 | --- | --- | --- |
 | Vermelho | Febre ou sangramento (leucemia), queda, dor no peito, botão de ajuda, 24 h sem uso | Todo o círculo de cuidado, na hora |
-| Laranja | Dose não confirmada em 60 min, manchas roxas, cansaço forte 3 dias | Responsável principal; sem resposta em 30 min, o próximo |
+| Laranja | Dose não confirmada em 30 min, check-in sem resposta em 15 min, manchas roxas, cansaço forte 3 dias | Responsável principal; se ele não agir em 15 min, todo o grupo |
 | Amarelo | Humor baixo 3 dias, estoque baixo | Resumo diário |
 
 Como testar as regras: `npm test` roda os casos do motor (`packages/regras/test`), da situação das doses

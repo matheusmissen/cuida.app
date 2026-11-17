@@ -11,8 +11,8 @@ insert into public.cuidadores (usuario_id, paciente_id, papel) values
 update public.pacientes set usuario_id = '33333333-3333-4333-8333-333333333333'
  where id = '00000000-0000-4000-8000-000000000001';
 
-\echo '--- 1. Padrão 09:00'
-select horario_checkin = '09:00' as padrao_nove_horas from public.pacientes;
+\echo '--- 1. Padrão 08:00 (docs/PRD.md)'
+select horario_checkin = '08:00' as padrao_oito_horas from public.pacientes;
 
 set role authenticated;
 \echo '--- 2. Família muda o horário e pode desligar'

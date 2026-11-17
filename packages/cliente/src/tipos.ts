@@ -16,11 +16,15 @@ export interface Paciente {
   ultima_interacao_em: string | null;
   /** 'HH:MM:SS', horário local do check-in diário da Lia; null = desligado. */
   horario_checkin: string | null;
+  /** Tempos de tolerância e escalada em minutos (leia com temposDoPaciente, de @cuida/regras). */
+  tolerancia_dose_min: number;
+  tolerancia_checkin_min: number;
+  escalada_min: number;
 }
 
 /** Colunas de `pacientes` que os apps leem. */
 export const SELECT_PACIENTE =
-  'id, usuario_id, nome, apelido, condicoes, outras_condicoes, limite_febre, ultima_interacao_em, horario_checkin';
+  'id, usuario_id, nome, apelido, condicoes, outras_condicoes, limite_febre, ultima_interacao_em, horario_checkin, tolerancia_dose_min, tolerancia_checkin_min, escalada_min';
 
 export interface Remedio {
   id: string;
