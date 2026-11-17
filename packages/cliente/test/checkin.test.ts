@@ -12,19 +12,14 @@ test('frases do check-in: chamada e segunda tentativa', () => {
   assert.match(fraseDoCheckin('Dona Maria', 2, em('09:30')), /ainda não conversamos hoje/);
 });
 
-test('notificações do check-in: hoje e amanhã, só no futuro', () => {
+test('notificações do check-in: um lembrete hoje e um amanhã, só no futuro', () => {
   const antes = instantesDoCheckin('09:00:00', em('08:00'), false).map((d) => d.toISOString());
-  assert.deepEqual(antes, [
-    '2026-11-20T12:00:00.000Z',
-    '2026-11-20T12:30:00.000Z',
-    '2026-11-21T12:00:00.000Z',
-    '2026-11-21T12:30:00.000Z',
-  ]);
-  assert.equal(instantesDoCheckin('09:00', em('09:10'), false).length, 3);
+  assert.deepEqual(antes, ['2026-11-20T12:00:00.000Z', '2026-11-21T12:00:00.000Z']);
+  assert.equal(instantesDoCheckin('09:00', em('09:10'), false).length, 1);
 });
 
-test('check-in feito hoje: só as notificações de amanhã; desligado: nenhuma', () => {
-  assert.equal(instantesDoCheckin('09:00', em('08:00'), true).length, 2);
+test('check-in feito hoje: só a notificação de amanhã; desligado: nenhuma', () => {
+  assert.equal(instantesDoCheckin('09:00', em('08:00'), true).length, 1);
   assert.deepEqual(instantesDoCheckin(null, em('08:00'), false), []);
 });
 

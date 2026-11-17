@@ -1,8 +1,9 @@
-// Quem a família avisa, e quando.
-// Vermelho: todo o círculo na hora. Laranja: o responsável principal; sem resposta
-// em 30 min, o próximo da escala (e assim por diante). Amarelo: resumo diário.
+// Quem a família avisa, e quando (docs/PRD.md, seção 2).
+// Vermelho (emergência): todo o grupo na hora, sem escalada.
+// Laranja (alerta crítico): o responsável principal; se ele não agir em `escaladaMin`
+// (padrão 15 min), todos os outros do grupo de uma vez. Amarelo: sem push (resumo diário fora do MVP).
 
-import type { Nivel } from '../../../packages/regras/src/index.ts';
+import { TEMPOS_PADRAO, type Nivel } from '../../../packages/regras/src/index.ts';
 
 export interface Cuidador {
   usuarioId: string;
@@ -17,8 +18,6 @@ export interface AlertaAberto {
   avisados: string[];
   vistoEm: string | null;
 }
-
-const MINUTOS_ESCALA = 30;
 
 /** Principal primeiro; depois pela ordem da escala. */
 export function ordemDaEscala(cuidadores: Cuidador[]): Cuidador[] {
@@ -36,12 +35,17 @@ export function destinatariosIniciais(nivel: Nivel, cuidadores: Cuidador[]): Cui
   return []; // amarelo vai no resumo diário; informativo fica só no histórico
 }
 
-/** Para um alerta laranja não visto: quem ainda precisa ser avisado agora. */
-export function proximosDaEscala(alerta: AlertaAberto, cuidadores: Cuidador[], agora: Date): Cuidador[] {
+/**
+ * Para um alerta laranja que ninguém marcou como visto: quem ainda precisa ser avisado agora.
+ * "Agir" = marcar o alerta como visto no app da família ("Vi, estou cuidando").
+ */
+export function proximosDaEscala(
+  alerta: AlertaAberto,
+  cuidadores: Cuidador[],
+  agora: Date,
+  escaladaMin: number = TEMPOS_PADRAO.escaladaMin,
+): Cuidador[] {
   if (alerta.nivel !== 'laranja' || alerta.vistoEm) return [];
-  const passados = Math.floor((agora.getTime() - Date.parse(alerta.criadoEm)) / (MINUTOS_ESCALA * 60_000));
-  if (passados < 1) return [];
-  const escala = ordemDaEscala(cuidadores);
-  const deveTerAvisado = escala.slice(0, Math.min(1 + passados, escala.length));
-  return deveTerAvisado.filter((c) => !alerta.avisados.includes(c.usuarioId));
+  if (agora.getTime() - Date.parse(alerta.criadoEm) < escaladaMin * 60_000) return [];
+  return ordemDaEscala(cuidadores).filter((c) => !alerta.avisados.includes(c.usuarioId));
 }

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { deveRealarmar, dosesDevidas, instantesDeAlarme, proximaDose, situacaoDose } from '../src/doses.ts';
 import { horaCurta, lerHora, saudacao } from '../src/formato.ts';
 import type { DoseComRemedio } from '../src/tipos.ts';
+import { TEMPOS_DEMONSTRACAO } from '@cuida/regras';
 
 const agora = new Date('2026-11-20T12:00:00-03:00');
 const min = (m: number) => new Date(agora.getTime() + m * 60_000).toISOString();
@@ -21,11 +22,12 @@ function dose(id: string, previstoEm: string, extra: Partial<DoseComRemedio> = {
   };
 }
 
-test('situação da dose segue o motor de regras', () => {
+test('situação da dose segue o motor de regras (tolerância de 30 min)', () => {
   assert.equal(situacaoDose(dose('a', min(10)), agora), 'futura');
   assert.equal(situacaoDose(dose('a', min(-5)), agora), 'agora');
-  assert.equal(situacaoDose(dose('a', min(-30)), agora), 'atrasada');
-  assert.equal(situacaoDose(dose('a', min(-60)), agora), 'perdida');
+  assert.equal(situacaoDose(dose('a', min(-29)), agora), 'agora');
+  assert.equal(situacaoDose(dose('a', min(-30)), agora), 'perdida');
+  assert.equal(situacaoDose(dose('a', min(-1)), agora, TEMPOS_DEMONSTRACAO), 'perdida');
   assert.equal(situacaoDose(dose('a', min(-90), { confirmado_em: min(-80), status: 'tomado' }), agora), 'tomada');
   assert.equal(situacaoDose(dose('a', min(-5), { status: 'perdido' }), agora), 'perdida');
 });
@@ -51,9 +53,10 @@ test('próxima dose é a primeira futura não confirmada', () => {
   assert.equal(proximaDose([dose('c', min(-10))], agora), null);
 });
 
-test('realarme aos 30 min (ou quando o servidor pedir)', () => {
+test('alarme fala de novo ao passar a tolerância (ou quando o servidor pedir)', () => {
   assert.equal(deveRealarmar(dose('a', min(-29)), agora), false);
   assert.equal(deveRealarmar(dose('a', min(-30)), agora), true);
+  assert.equal(deveRealarmar(dose('a', min(-1)), agora, TEMPOS_DEMONSTRACAO), true);
   assert.equal(deveRealarmar(dose('a', min(-5), { realarmado_em: min(-1) }), agora), true);
 });
 

@@ -1,7 +1,7 @@
 // Check-in diário na família: o cartão do painel ("Último check-in") e o ajuste de horário.
 // A situação de hoje usa situacaoDoCheckin (packages/regras), a mesma conta do servidor.
 import { horaCurta, horaDoBanco, lerHora, resumoDoCheckin, type CheckinLinha } from '@cuida/cliente';
-import { situacaoDoCheckin, tentativasDoCheckin } from '@cuida/regras';
+import { minutosPorExtenso, situacaoDoCheckin, temposDoPaciente, tentativasDoCheckin, type Tempos } from '@cuida/regras';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { Botao, Campo, Cartao, Erro, Selo, Texto, Titulo } from '@/components/ui';
@@ -9,11 +9,11 @@ import { usePaciente } from '@/lib/paciente';
 import { supabase } from '@/lib/supabase';
 import { paleta } from '@/lib/tema';
 
-function statusDeHoje(horario: string | null, ultimo: CheckinLinha | null, agora: Date) {
+function statusDeHoje(horario: string | null, ultimo: CheckinLinha | null, agora: Date, tempos: Tempos) {
   if (!horario) return null;
   let s;
   try {
-    s = situacaoDoCheckin(horario, agora, ultimo?.feito_em ?? null);
+    s = situacaoDoCheckin(horario, agora, ultimo?.feito_em ?? null, tempos);
   } catch {
     return null;
   }
@@ -30,7 +30,7 @@ function statusDeHoje(horario: string | null, ultimo: CheckinLinha | null, agora
 export function CartaoUltimoCheckin({ ultimo, agora }: { ultimo: CheckinLinha | null; agora: Date }) {
   const { paciente } = usePaciente();
   if (!paciente) return null;
-  const status = statusDeHoje(paciente.horario_checkin, ultimo, agora);
+  const status = statusDeHoje(paciente.horario_checkin, ultimo, agora, temposDoPaciente(paciente));
   const resumo = ultimo ? resumoDoCheckin(ultimo) : [];
   const deHoje =
     ultimo &&
@@ -76,6 +76,7 @@ export function HorarioCheckin() {
   if (!paciente) return null;
   const horario = paciente.horario_checkin;
   const nome = paciente.apelido || paciente.nome;
+  const tempos = temposDoPaciente(paciente);
 
   async function salvar(novo: string | null) {
     setErro(null);
@@ -92,22 +93,22 @@ export function HorarioCheckin() {
       <Titulo>Check-in diário</Titulo>
       {horario ? (
         <Texto suave>
-          A Lia chama {nome} às {horaDoBanco(horario)} e de novo 30 min depois. Sem resposta em 1 h, o responsável
-          principal é avisado.
+          A Lia chama {nome} às {horaDoBanco(horario)}. Sem resposta em {minutosPorExtenso(tempos.toleranciaCheckinMin)}, o
+          responsável principal é avisado; se ele não agir em {minutosPorExtenso(tempos.escaladaMin)}, todo o grupo.
         </Texto>
       ) : (
         <Texto suave>Check-in diário desligado.</Texto>
       )}
       {editando ? (
         <View style={{ gap: 10 }}>
-          <Campo rotulo="Horário do check-in" value={hora} onChangeText={setHora} placeholder="09:00" autoCapitalize="none" />
+          <Campo rotulo="Horário do check-in" value={hora} onChangeText={setHora} placeholder="08:00" autoCapitalize="none" />
           <Erro mensagem={erro} />
           <Botao
             titulo="Salvar horário"
             carregando={salvando}
             onPress={() => {
               const lida = lerHora(hora);
-              if (!lida) return setErro('Horário inválido. Use, por exemplo: 09:00');
+              if (!lida) return setErro('Horário inválido. Use, por exemplo: 08:00');
               salvar(lida);
             }}
           />
@@ -119,7 +120,7 @@ export function HorarioCheckin() {
           variante="secundario"
           titulo={horario ? 'Mudar horário' : 'Ligar check-in diário'}
           onPress={() => {
-            setHora(horario ? horaDoBanco(horario) : '09:00');
+            setHora(horario ? horaDoBanco(horario) : '08:00');
             setErro(null);
             setEditando(true);
           }}

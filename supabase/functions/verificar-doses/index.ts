@@ -1,13 +1,16 @@
-// Edge Function verificar-doses — chamada pelo pg_cron a cada 5 minutos.
+// Edge Function verificar-doses — chamada pelo pg_cron a cada minuto.
+// Tempos de cada paciente em `pacientes` (tolerancia_dose_min, tolerancia_checkin_min, escalada_min);
+// padrão do PRD 30/15/15, e 1/1/1 no modo demonstração (packages/regras, temposDoPaciente).
 // 1. Gera as doses de hoje e de amanhã (idempotente).
-// 2. Doses sem "Tomei": 30 min → realarme; 60 min → alerta (motor de regras, avaliarDose).
-// 3. Alertas laranja não vistos: avisa o próximo da escala a cada 30 min.
+// 2. Doses sem "Tomei" até a tolerância → alerta laranja ao responsável (motor de regras, avaliarDose).
+// 3. Alertas laranja que ninguém marcou como vistos: depois de `escalada_min`, avisa todo o grupo.
 // 4. Nenhuma interação do aparelho do idoso em 24 h: alerta vermelho (uma vez por silêncio).
-// 5. Check-in diário sem resposta após 2 tentativas em 1 h: alerta laranja (uma vez por dia).
+// 5. Check-in diário sem resposta até a tolerância: alerta laranja (uma vez por dia).
 // Só aceita chave de servidor (o cron): service_role antiga ou chave secreta nova (_shared/autorizacao.ts).
 // Os apps nunca chamam esta função.
 
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
+import { TEMPOS_PADRAO, temposDoPaciente, type Tempos } from '../../../packages/regras/src/index.ts';
 import { aplicarRegraDoPaciente, planejarDoses, type DoseLinha, type RegraPaciente } from '../_shared/doses.ts';
 import { checkinsSemResposta } from '../_shared/checkin.ts';
 import { proximosDaEscala } from '../_shared/escala.ts';
@@ -16,7 +19,21 @@ import { enviarPush, mensagensPush } from '../_shared/push.ts';
 import { pacientesEmSilencio } from '../_shared/silencio.ts';
 import { autorizadoComoServidor, chavesDeServidor, credenciaisRecebidas, tipoDaChave } from '../_shared/autorizacao.ts';
 
-const HORA = 60 * 60_000;
+const MINUTO = 60_000;
+const HORA = 60 * MINUTO;
+
+/** paciente_id → tempos (colunas de `pacientes`; ausentes ou inválidas viram o padrão do PRD). */
+async function carregarTempos(supabase: SupabaseClient, ids: string[]): Promise<Map<string, Tempos>> {
+  const tempos = new Map<string, Tempos>();
+  if (ids.length === 0) return tempos;
+  const { data, error } = await supabase
+    .from('pacientes')
+    .select('id, tolerancia_dose_min, tolerancia_checkin_min, escalada_min')
+    .in('id', ids);
+  if (error) console.error('tempos', error.message); // segue com o padrão
+  for (const p of data ?? []) tempos.set(p.id, temposDoPaciente(p));
+  return tempos;
+}
 
 Deno.serve(async (req) => {
   const chaves = chavesDeServidor({
@@ -42,13 +59,14 @@ Deno.serve(async (req) => {
   const { error: erroGerar } = await supabase.rpc('gerar_doses_dia');
   if (erroGerar) console.error('gerar_doses_dia', erroGerar.message);
 
-  // Doses atrasadas de até 24 h (doses mais antigas não geram alerta novo).
+  // Doses atrasadas de até 24 h (doses mais antigas não geram alerta novo). A partir de 1 min
+  // (a menor tolerância possível); a tolerância de cada paciente é aplicada por planejarDoses.
   const { data: linhas, error } = await supabase
     .from('doses')
-    .select('id, paciente_id, previsto_em, confirmado_em, realarmado_em, horarios!inner(remedios!inner(nome, critico))')
+    .select('id, paciente_id, previsto_em, confirmado_em, horarios!inner(remedios!inner(nome, critico))')
     .eq('status', 'pendente')
     .is('confirmado_em', null)
-    .lte('previsto_em', new Date(agora.getTime() - HORA / 2).toISOString())
+    .lte('previsto_em', new Date(agora.getTime() - MINUTO).toISOString())
     .gte('previsto_em', new Date(agora.getTime() - 24 * HORA).toISOString());
   if (error) return Response.json({ erro: error.message }, { status: 500 });
 
@@ -58,7 +76,6 @@ Deno.serve(async (req) => {
     pacienteId: l.paciente_id,
     previstoEm: l.previsto_em,
     confirmadoEm: l.confirmado_em,
-    realarmadoEm: l.realarmado_em,
     critico: l.horarios.remedios.critico,
     nomeRemedio: l.horarios.remedios.nome,
   }));
@@ -80,15 +97,8 @@ Deno.serve(async (req) => {
     }));
   }
 
-  const plano = planejarDoses(doses, regras, agora);
-
-  if (plano.realarmar.length > 0) {
-    await supabase
-      .from('doses')
-      .update({ realarmado_em: agora.toISOString() })
-      .in('id', plano.realarmar)
-      .is('realarmado_em', null);
-  }
+  const temposDoses = await carregarTempos(supabase, pacientes);
+  const plano = planejarDoses(doses, regras, agora, temposDoses);
 
   let alertasCriados = 0;
   for (const perdida of plano.perdidas) {
@@ -111,7 +121,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Escala dos alertas laranja não vistos nas últimas 24 h.
+  // Escalada dos alertas laranja não vistos nas últimas 24 h: depois de escalada_min, todo o grupo.
   let escalados = 0;
   const { data: abertos } = await supabase
     .from('alertas')
@@ -119,12 +129,14 @@ Deno.serve(async (req) => {
     .eq('nivel', 'laranja')
     .is('visto_em', null)
     .gte('criado_em', new Date(agora.getTime() - 24 * HORA).toISOString());
+  const temposEscala = await carregarTempos(supabase, [...new Set((abertos ?? []).map((a) => a.paciente_id))]);
   for (const a of abertos ?? []) {
     const cuidadores = await carregarCuidadores(supabase, a.paciente_id);
     const proximos = proximosDaEscala(
       { nivel: a.nivel, criadoEm: a.criado_em, avisados: a.avisados, vistoEm: a.visto_em },
       cuidadores,
       agora,
+      (temposEscala.get(a.paciente_id) ?? TEMPOS_PADRAO).escaladaMin,
     );
     if (proximos.length === 0) continue;
     await supabase
@@ -171,14 +183,20 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Check-in diário: duas tentativas (no horário e 30 min depois) sem resposta → laranja.
+  // Check-in diário: sem resposta até a tolerância do paciente (padrão 15 min) → laranja.
   let checkinsSemResp = 0;
   const { data: comCheckin } = await supabase
     .from('pacientes')
-    .select('id, horario_checkin')
+    .select('id, horario_checkin, tolerancia_dose_min, tolerancia_checkin_min, escalada_min')
     .not('usuario_id', 'is', null)
     .not('horario_checkin', 'is', null);
-  const ativos = (comCheckin ?? []) as { id: string; horario_checkin: string }[];
+  const ativos = (comCheckin ?? []) as {
+    id: string;
+    horario_checkin: string;
+    tolerancia_dose_min: number;
+    tolerancia_checkin_min: number;
+    escalada_min: number;
+  }[];
   if (ativos.length > 0) {
     const ids = ativos.map((p) => p.id);
     const desde = new Date(agora.getTime() - 48 * HORA).toISOString();
@@ -204,7 +222,12 @@ Deno.serve(async (req) => {
     const ultimoCheckin = maisRecente(((recentes ?? []) as { paciente_id: string; feito_em: string }[]).map((c) => ({ paciente_id: c.paciente_id, em: c.feito_em })));
     const ultimoAvisoCheckin = maisRecente(((avisosCheckin ?? []) as { paciente_id: string; criado_em: string }[]).map((a) => ({ paciente_id: a.paciente_id, em: a.criado_em })));
     const semResposta = checkinsSemResposta(
-      ativos.map((p) => ({ id: p.id, horarioCheckin: p.horario_checkin, ultimoCheckinEm: ultimoCheckin.get(p.id) ?? null })),
+      ativos.map((p) => ({
+        id: p.id,
+        horarioCheckin: p.horario_checkin,
+        ultimoCheckinEm: ultimoCheckin.get(p.id) ?? null,
+        tempos: temposDoPaciente(p),
+      })),
       ultimoAvisoCheckin,
       agora,
     );
@@ -224,7 +247,6 @@ Deno.serve(async (req) => {
   }
 
   return Response.json({
-    realarmes: plano.realarmar.length,
     alertas: alertasCriados,
     escalados,
     silencios,

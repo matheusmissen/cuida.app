@@ -16,6 +16,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { temposDoPaciente, type Tempos } from '@cuida/regras';
 import { Alarme } from '@/components/alarme';
 import { TelaConversa } from '@/components/conversa';
 import { TelaFamiliaAvisada } from '@/components/familia-avisada';
@@ -62,6 +63,7 @@ export default function Inicio() {
       pacienteId={paciente.id}
       apelido={paciente.apelido || paciente.nome.split(' ')[0]}
       horarioCheckin={paciente.horario_checkin}
+      tempos={temposDoPaciente(paciente)}
     />
   );
 }
@@ -72,10 +74,12 @@ function TelaDoDia({
   pacienteId,
   apelido,
   horarioCheckin,
+  tempos,
 }: {
   pacienteId: string;
   apelido: string;
   horarioCheckin: string | null;
+  tempos: Tempos;
 }) {
   const { doses, agora, confirmar } = useDoses(pacienteId);
   const { convite, recarregar: recarregarCheckin } = useCheckin(pacienteId, apelido, horarioCheckin, agora);
@@ -127,7 +131,7 @@ function TelaDoDia({
     falar(mensagemDaAjuda(resultado).fala);
   };
 
-  const alarme = devidas[0] && <Alarme dose={devidas[0]} apelido={apelido} agora={agora} onTomei={confirmar} />;
+  const alarme = devidas[0] && <Alarme dose={devidas[0]} apelido={apelido} agora={agora} tempos={tempos} onTomei={confirmar} />;
 
   if (!iniciado) {
     return (

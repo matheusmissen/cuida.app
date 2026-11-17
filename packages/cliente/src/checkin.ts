@@ -14,8 +14,8 @@ export function fraseDoCheckin(apelido: string, tentativa: 1 | 2, agora: Date): 
 }
 
 /**
- * Instantes das notificações do check-in (celular): tentativas de hoje e de amanhã que ainda
- * estão no futuro. Se o check-in de hoje já foi feito, só as de amanhã.
+ * Instantes das notificações do check-in (celular): o lembrete de hoje e o de amanhã que ainda
+ * estão no futuro. Se o check-in de hoje já foi feito, só o de amanhã.
  */
 export function instantesDoCheckin(horario: string | null, agora: Date, feitoHoje: boolean): Date[] {
   if (!horario) return [];

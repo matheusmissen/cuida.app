@@ -48,11 +48,9 @@ export interface Alerta {
 export interface Dose {
   previstoEm: string;
   confirmadoEm?: string | null;
-  critico: boolean;
+  /** Não muda mais o nível do alerta (PRD); fica para a família identificar o remédio. */
+  critico?: boolean;
   nomeRemedio: string;
 }
 
-export type AcaoDose =
-  | { acao: 'nenhuma' }
-  | { acao: 'realarmar' }
-  | { acao: 'alertar'; alerta: Alerta };
+export type AcaoDose = { acao: 'nenhuma' } | { acao: 'alertar'; alerta: Alerta };

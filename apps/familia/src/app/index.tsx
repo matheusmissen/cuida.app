@@ -8,6 +8,7 @@ import {
   type DoseComRemedio,
   type SituacaoDose,
 } from '@cuida/cliente';
+import { temposDoPaciente } from '@cuida/regras';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -26,7 +27,6 @@ type Cor = { texto: string; cor: string; fundo: string };
 const SITUACAO: Record<SituacaoDose, Cor> = {
   tomada: { texto: 'Tomou', cor: paleta.salvia.texto, fundo: paleta.salvia.fundo },
   perdida: { texto: 'Não confirmou', cor: paleta.alerta.texto, fundo: paleta.alerta.fundo },
-  atrasada: { texto: 'Atrasada', cor: paleta.alerta.texto, fundo: paleta.alerta.fundo },
   agora: { texto: 'Alarme tocando', cor: paleta.salvia.texto, fundo: paleta.salvia.fundo },
   futura: { texto: 'Mais tarde', cor: paleta.textoSuave, fundo: paleta.superficieNeutra },
 };
@@ -282,7 +282,7 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
               )}
               {doses.map((d, i) => {
                 const proximo = d.id === proximaId;
-                const s = proximo ? PROXIMO : SITUACAO[situacaoDose(d, agora)];
+                const s = proximo ? PROXIMO : SITUACAO[situacaoDose(d, agora, temposDoPaciente(paciente))];
                 const pendenteVencida = !d.confirmado_em && Date.parse(d.previsto_em) <= agora.getTime();
                 return (
                   <View key={d.id}>

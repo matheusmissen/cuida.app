@@ -27,20 +27,24 @@ test('amarelo e informativo não mandam push na hora', () => {
   assert.equal(destinatariosIniciais('informativo', circulo).length, 0);
 });
 
-test('laranja sem resposta em 30 min: avisa o próximo', () => {
+test('laranja sem ação do responsável em 15 min: avisa todos os outros de uma vez', () => {
   const alerta = { nivel: 'laranja' as const, criadoEm, avisados: ['neto'], vistoEm: null };
-  assert.deepEqual(proximosDaEscala(alerta, circulo, depois(29)), []);
-  assert.deepEqual(proximosDaEscala(alerta, circulo, depois(30)).map((c) => c.usuarioId), ['filha']);
+  assert.deepEqual(proximosDaEscala(alerta, circulo, depois(14)), []);
+  assert.deepEqual(proximosDaEscala(alerta, circulo, depois(15)).map((c) => c.usuarioId), ['filha', 'vizinha']);
 });
 
-test('laranja sem resposta em 60 min: chega ao terceiro', () => {
-  const alerta = { nivel: 'laranja' as const, criadoEm, avisados: ['neto', 'filha'], vistoEm: null };
-  assert.deepEqual(proximosDaEscala(alerta, circulo, depois(65)).map((c) => c.usuarioId), ['vizinha']);
-  const todos = { ...alerta, avisados: ['neto', 'filha', 'vizinha'] };
+test('escalada configurável: 1 minuto na demonstração', () => {
+  const alerta = { nivel: 'laranja' as const, criadoEm, avisados: ['neto'], vistoEm: null };
+  assert.deepEqual(proximosDaEscala(alerta, circulo, depois(0.5), 1), []);
+  assert.equal(proximosDaEscala(alerta, circulo, depois(1), 1).length, 2);
+});
+
+test('depois de avisar todos, não repete', () => {
+  const todos = { nivel: 'laranja' as const, criadoEm, avisados: ['neto', 'filha', 'vizinha'], vistoEm: null };
   assert.deepEqual(proximosDaEscala(todos, circulo, depois(200)), []);
 });
 
-test('alerta visto para a escala', () => {
+test('alerta visto (responsável agiu) para a escala', () => {
   const alerta = { nivel: 'laranja' as const, criadoEm, avisados: ['neto'], vistoEm: depois(10).toISOString() };
   assert.deepEqual(proximosDaEscala(alerta, circulo, depois(90)), []);
 });

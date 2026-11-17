@@ -74,12 +74,13 @@ O app do idoso faz login uma vez por QR code gerado no app da família (vincula 
 
 **As regras são código determinístico no servidor, nunca decididas pelo LLM.** O LLM só transforma a fala em dados estruturados. Se a IA cair, alarmes e alertas por silêncio continuam funcionando. Na dúvida, a regra sobe de nível.
 
-Níveis: vermelho (todo o círculo na hora), laranja (responsável principal; sem resposta em 30 min, o próximo da escala), amarelo (resumo diário), informativo (só histórico).
+Níveis: vermelho (emergência: todo o grupo na hora), laranja (alerta crítico: responsável principal; se ele não agir em `escalada_min`, padrão 15 min, todo o grupo de uma vez), amarelo (resumo diário), informativo (só histórico).
 
 Regras gerais:
 - Botão "Preciso de ajuda" → vermelho.
-- Dose sem confirmação: novo alarme aos 30 min; alerta laranja aos 60 min (vermelho se o remédio for crítico).
-- Check-in sem resposta após 2 tentativas em 1 h → laranja.
+- Dose sem confirmação em `tolerancia_dose_min` (padrão 30 min) → laranja (gatilho `dose.nao_confirmada`; o remédio crítico não muda mais o nível).
+- Check-in sem resposta em `tolerancia_checkin_min` (padrão 15 min) depois do horário (padrão 08:00) → laranja.
+- Os três tempos ficam em `pacientes` (1 a 240 min) e são lidos com `temposDoPaciente` (`packages/regras/src/tempos.ts`). Modo demonstração (Ajustes da família) = tudo em 1 minuto. `verificar-doses` roda a cada minuto.
 - Nenhuma interação com o app em 24 h → vermelho.
 - Queda, dor no peito ou falta de ar relatadas → vermelho.
 - Humor baixo 3 dias seguidos → amarelo. Estoque abaixo de 5 dias → amarelo.
@@ -141,7 +142,7 @@ Pronto e testado:
 - `packages/regras`: motor de regras de alerta em TypeScript puro, sem dependências, com 36 testes. Use estas funções nas Edge Functions; não reimplemente as regras.
 - `packages/cliente`: cliente Supabase (só chave anon), tipos das tabelas e utilitários de doses (usam `avaliarDose`), com testes.
 - `supabase/migrations`: esquema com RLS; `criar_paciente`, `gerar_codigo_vinculo`, `vincular_aparelho`, `registrar_interacao`, `gerar_doses_dia`, `gerar_doses_hoje`, `confirmar_dose`; realtime de alertas/doses; pg_cron (URL e chave no Vault). Validado em Postgres 16 com `supabase/tests/rls_manual.sql` e `doses_manual.sql`.
-- `supabase/functions/verificar-doses`: realarme (30 min), alerta de dose perdida (60 min), escala laranja e push. Lógica pura em `_shared/` com testes em Node (`npm test`). `_shared/alertar.ts` (`criarEAvisar`) deve ser reutilizado pelas próximas funções.
+- `supabase/functions/verificar-doses`: alerta de dose não confirmada e escalada laranja com os tempos de cada paciente (Etapa 1; antes: realarme aos 30 min e alerta aos 60), e push. Lógica pura em `_shared/` com testes em Node (`npm test`). `_shared/alertar.ts` (`criarEAvisar`) deve ser reutilizado pelas próximas funções.
 - `supabase/functions/verificar-doses` também cria o alerta vermelho de silêncio de 24 h (`_shared/silencio.ts`, usa `avaliarSilencio`).
 - `supabase/functions/agente`: conversa com a Lia (API da Anthropic, segredo `LLM_API_KEY`). Entrada `POST { texto, historico?: [{ papel: 'idoso' | 'lia', texto }] }` com o token do aparelho do idoso; saída `{ resposta, alertas }`. Usa `avaliarCheckin` + `criarEAvisar`, rede de palavras-chave (`agente/sinais.ts`) mesclada ao LLM, registro automático se o LLM falhar e revisão das respostas (`agente/revisao.ts`). `confirmar_remedio` chama `confirmar_dose` com o token do idoso. Três pedidos de repetição seguidos da Lia geram alerta laranja (`agente/entendimento.ts` + `avaliarNaoEntendeu`).
 - `apps/familia`: login por e-mail, cadastro do paciente com consentimento, remédios/horários, QR de vínculo, painel do dia com alertas em tempo real.

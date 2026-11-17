@@ -2,6 +2,7 @@
 // Um remédio por vez, uma ação: "Tomei". No celular ocupa a tela inteira; na web é um modal
 // centralizado sobre a página (os jurados não instalam nada).
 import { deveRealarmar, horaCurta, type DoseComRemedio } from '@cuida/cliente';
+import type { Tempos } from '@cuida/regras';
 import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -24,22 +25,25 @@ export function Alarme({
   dose,
   apelido,
   agora,
+  tempos,
   onTomei,
 }: {
   dose: DoseComRemedio;
   apelido: string;
   agora: Date;
+  /** Tempos do paciente: o alarme fala de novo quando passa a tolerância. */
+  tempos?: Tempos;
   onTomei: (doseId: string) => Promise<boolean>;
 }) {
   const [enviando, setEnviando] = useState(false);
   const [falhou, setFalhou] = useState(false);
   const falado = useRef<{ id: string; deNovo: boolean } | null>(null);
   const falando = useFalando();
-  const deNovo = deveRealarmar(dose, agora);
+  const deNovo = deveRealarmar(dose, agora, tempos);
   const frase = fraseDoAlarme(dose, apelido, deNovo);
   const r = dose.horarios.remedios;
 
-  // Fala ao aparecer e de novo aos 30 min (regra de dose sem confirmação).
+  // Fala ao aparecer e de novo quando passa a tolerância (padrão 30 min) sem confirmação.
   useEffect(() => {
     const anterior = falado.current;
     if (!anterior || anterior.id !== dose.id || (deNovo && !anterior.deNovo)) {
