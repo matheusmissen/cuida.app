@@ -2,6 +2,17 @@
 
 Este arquivo dá ao Claude Code o contexto do projeto. Leia antes de qualquer tarefa.
 
+## Fontes oficiais (a partir de 17/11/2026)
+
+- **`docs/PRD.md`** é a fonte oficial do que o MVP faz: telas, regras de alerta, tempos, cadastro, consentimento (LGPD) e o que fica fora do MVP. O Cuida passa a ser um **web app instalável (PWA)**, sem loja de apps.
+- **`docs/design.md`** é a fonte oficial do visual (Variação E). **Toda tela nova ou ajustada segue `docs/design.md`.**
+- Se este arquivo discordar do PRD ou do design, **valem `docs/PRD.md` e `docs/design.md`**. O restante deste arquivo descreve a versão anterior (guardada na etiqueta `v1-antiga`) e será atualizado aos poucos, conforme as etapas do novo plano forem entregues.
+
+## Regra de trabalho no Git
+
+- **Nenhuma mudança vai direto para o `main`**: nada de merge nem push no `main`.
+- Cada mudança é feita num ramo próprio, enviada para o GitHub e entra por **pull request**, que o dono do projeto aprova.
+
 ## O que estamos construindo
 
 Dois apps ligados a um backend:
@@ -30,7 +41,9 @@ O primeiro usuário real é uma idosa que mora sozinha e trata leucemia. O objet
 
 ## Design
 
-Visual aprovado: "Manhã Clara". Siga `docs/design/README.md` e `docs/design/tokens.json`; as telas de referência estão em `docs/design/telas/` (HTML só para consulta, não importar nos apps).
+**Visual oficial: Variação E, em `docs/design.md`.** Toda tela nova ou ajustada segue esse guia.
+
+Versão anterior (ainda aplicada nas telas existentes, até serem refeitas): "Manhã Clara". Siga `docs/design/README.md` e `docs/design/tokens.json`; as telas de referência estão em `docs/design/telas/` (HTML só para consulta, não importar nos apps).
 
 ## Regras de interface do app do idoso
 
