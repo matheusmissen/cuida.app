@@ -120,7 +120,7 @@ Se apertar, cortar primeiro o alerta por silêncio de 24 h e o painel do dia com
 - **README** com: problema, como rodar, link da demo, link do vídeo, arquitetura e como testar as regras de alerta.
 - Repositório público pelo menos até 15/12/2026.
 
-## Estado atual (etapas 18–21/11 e 22–25/11 concluídas)
+## Estado atual (etapas 18–21/11 e 22–25/11 concluídas; 26–27/11 em andamento)
 
 Pronto e testado:
 - `packages/regras`: motor de regras de alerta em TypeScript puro, sem dependências, com 36 testes. Use estas funções nas Edge Functions; não reimplemente as regras.
@@ -139,10 +139,12 @@ Pronto e testado:
 
 - Documentos (16/11): migration `20261123120000_documentos.sql` (tabela `documentos`, bucket privado `documentos`, `criar_alarmes_da_receita`, `remedios.termina_em` respeitado na geração de doses), validada com `supabase/tests/documentos_manual.sql`. Edge Function `ler-receita` com normalização em `_shared/receita.ts` (18 testes). No `apps/familia`: telas `app/documentos/index.tsx` (abas Receitas/Exames/Relatórios), `adicionar.tsx` (foto pela câmera com expo-image-picker ou arquivo/PDF com expo-document-picker → bucket `documentos` em `<paciente_id>/<arquivo>` → linha em `documentos`) e `receita.tsx` (chama `ler-receita`, itens `precisa_revisao` ficam "Precisa de você" até a família definir horários; "Criar N alarmes" chama `criar_alarmes_da_receita` só com os conferidos). Item Documentos na barra de navegação (5 ícones). Supabase em `lib/documentos.ts`; lógica pura em `packages/cliente/src/documentos.ts`, com testes.
 
-Próximo passo (26–27/11): teste ponta a ponta no Supabase hospedado (ainda não feito), botão "Preciso de ajuda" no app do idoso, publicação web na Vercel e paciente sintética completa no banco.
+- Etapa 26–27/11 (parte feita em 16/11): botão "Preciso de ajuda" no `apps/idoso` (fim do início). Chama a Edge Function `pedir-ajuda` (grava pelo banco e manda push); se falhar, chama direto a função SQL `pedir_ajuda()` (migration `20261124120000_pedido_de_ajuda.sql`: vermelho para todo o círculo, conta como interação, toques em 2 min não duplicam); se tudo falhar, a tela oferece o SAMU (192) e não diz "família avisada". Lógica em `packages/cliente/src/ajuda.ts`; `packages/regras/test/ajuda.test.ts` confere que a migration usa o mesmo alerta de `pedidoDeAjuda()`; teste do banco em `supabase/tests/ajuda_manual.sql`. Seed com uma semana de doses, check-ins e alertas; "hoje" no seed é o dia de Brasília. `apps/*/vercel.json` prontos (passo a passo no README).
+
+Próximo passo: teste ponta a ponta no Supabase hospedado (ainda não feito), criar os dois projetos na Vercel com as variáveis `EXPO_PUBLIC_*`, `eas init` para o push da família e rodar `npm run typecheck` (não foi possível no ambiente da nuvem, sem dependências instaladas).
 
 - Design "Manhã Clara" aplicado nos dois apps: temas em `apps/*/src/lib/tema.ts` importam `docs/design/tokens.json` (não duplique cores); fontes Atkinson Hyperlegible e Outfit via `@expo-google-fonts` (carregadas no `_layout`); ícones de traço em `components/icones.tsx` (react-native-svg). Idoso: `Texto`/`Destaque` em `components/ui.tsx` garantem 20 pt; telas de início, conversa (`components/conversa.tsx`), alarme (tela cheia no celular, modal na web) e "Sua família foi avisada" (aparece quando o agente registra pedido de ajuda). Família: painel do dia com cartão vermelho, tela do alerta, barra de navegação flutuante (Hoje, Remédios, Documentos, Alertas, Ajustes) e tela Ajustes (horário do check-in, vincular, sair). `packages/cliente/test/design.test.ts` confere 20 pt, toques de 64 e contraste 4,5:1 dos tokens.
-- Ainda sem dados para partes das referências: nomes e telefones do círculo no idoso ("Ligar para o Lucas"), "Quem foi avisado" por pessoa e botões de ligar no alerta da família. O botão "Preciso de ajuda" entra com a etapa 26–27/11.
+- Ainda sem dados para partes das referências: nomes e telefones do círculo no idoso ("Ligar para o Lucas"), "Quem foi avisado" por pessoa e botões de ligar no alerta da família.
 
 Observações: `npx expo install` precisa de `EXPO_OFFLINE=1` neste ambiente (api.expo.dev bloqueado). O push da família exige `eas init` (projectId).
 
