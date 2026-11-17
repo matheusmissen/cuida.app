@@ -7,3 +7,4 @@ export * from './documentos.ts';
 export * from './ajuda.ts';
 export * from './condicoes.ts';
 export { criarCliente } from './supabase.ts';
+export * from './pwa.ts';
