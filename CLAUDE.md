@@ -43,6 +43,8 @@ O primeiro usuário real é uma idosa que mora sozinha e trata leucemia. O objet
 
 **Visual oficial: Variação E, em `docs/design.md`.** Toda tela nova ou ajustada segue esse guia.
 
+O tema e os componentes base da Variação E ficam em `packages/visual` (`@cuida/visual`): cores, fontes (Nunito 800 e Atkinson Hyperlegible, já carregadas no `_layout` dos dois apps), raios, alturas, `BotaoPrincipal`, `BotaoSecundario`, `Cartao`, `Quadradinho`, `Campo`, `BarraAbas`, `Rostinho`/`GradeRostinhos` e `Paisagem` (dia/noite pela hora do aparelho). Use esses componentes nas telas novas; não copie cores. Ao mudar um valor em `packages/visual/src/tema.ts`, mude também `docs/design.md` (o teste `packages/visual/test/tema.test.ts` confere). Página de conferência: `/vitrine` nos dois apps (componente `Vitrine` do pacote).
+
 Versão anterior (ainda aplicada nas telas existentes, até serem refeitas): "Manhã Clara". Siga `docs/design/README.md` e `docs/design/tokens.json`; as telas de referência estão em `docs/design/telas/` (HTML só para consulta, não importar nos apps).
 
 ## Regras de interface do app do idoso

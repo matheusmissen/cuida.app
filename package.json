@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "test": "npm run test:pacotes && npm run test:funcoes",
-    "test:pacotes": "npm run test --workspace=@cuida/regras --workspace=@cuida/cliente",
+    "test:pacotes": "npm run test --workspace=@cuida/regras --workspace=@cuida/cliente --workspace=@cuida/visual",
     "test:funcoes": "node --experimental-strip-types --test supabase/functions/_shared/*.test.ts supabase/functions/agente/*.test.ts",
     "typecheck": "npm run typecheck --workspace=@cuida/idoso --workspace=@cuida/familia",
     "idoso": "npm run web --workspace=@cuida/idoso",
