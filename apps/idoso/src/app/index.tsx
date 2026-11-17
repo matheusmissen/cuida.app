@@ -1,17 +1,29 @@
 // Tela única do idoso (referência: docs/design/telas/Idoso-Inicio.dc.html).
 // Início → (toque no microfone ou chamada do check-in) → conversa com a Lia → "Voltar ao início".
 // O alarme de remédio aparece por cima de tudo e tem prioridade sobre o check-in.
-import { dataCurta, dosesDevidas, ehPedidoDeAjuda, horaCurta, proximaDose, saudacao } from '@cuida/cliente';
+// "Preciso de ajuda" fica sempre no fim do início e não depende da IA (pedir-ajuda → pedir_ajuda()).
+import {
+  dataCurta,
+  dosesDevidas,
+  ehPedidoDeAjuda,
+  horaCurta,
+  mensagemDaAjuda,
+  pedirAjuda,
+  proximaDose,
+  saudacao,
+  type ResultadoAjuda,
+} from '@cuida/cliente';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Alarme } from '@/components/alarme';
 import { TelaConversa } from '@/components/conversa';
 import { TelaFamiliaAvisada } from '@/components/familia-avisada';
-import { IconeMicrofone } from '@/components/icones';
+import { IconeMicrofone, IconeTelefone } from '@/components/icones';
 import { BotaoPrincipal, Destaque, Texto } from '@/components/ui';
 import { VincularAparelho } from '@/components/vincular-aparelho';
 import { useAparelho } from '@/lib/aparelho';
+import { supabase } from '@/lib/supabase';
 import { alvos, cores, espacos, sombras, tamanhos } from '@/lib/tema';
 import { useCheckin } from '@/lib/use-checkin';
 import { useConversa } from '@/lib/use-conversa';
@@ -69,6 +81,8 @@ function TelaDoDia({
   const { convite, recarregar: recarregarCheckin } = useCheckin(pacienteId, apelido, horarioCheckin, agora);
   const conversa = useConversa({ aoResponder: recarregarCheckin });
   const [modo, setModo] = useState<Modo>('inicio');
+  const [resultadoAjuda, setResultadoAjuda] = useState<ResultadoAjuda>('avisada');
+  const [enviandoAjuda, setEnviandoAjuda] = useState(false);
   // Na web o navegador só deixa falar depois de um toque: um botão "Começar" na abertura.
   const [iniciado, setIniciado] = useState(Platform.OS !== 'web');
   const chamadas = useRef(new Set<string>());
@@ -93,8 +107,25 @@ function TelaDoDia({
 
   // Pedido de ajuda registrado pelo agente: mostra "Sua família foi avisada".
   useEffect(() => {
-    if (conversa.alertas.some(ehPedidoDeAjuda)) setModo('avisada');
+    if (conversa.alertas.some(ehPedidoDeAjuda)) {
+      setResultadoAjuda('avisada');
+      setModo('avisada');
+    }
   }, [conversa.alertas]);
+
+  // Botão "Preciso de ajuda": Edge Function (alerta + push); se falhar, grava direto no banco.
+  const apertarAjuda = async () => {
+    if (enviandoAjuda) return;
+    setEnviandoAjuda(true);
+    const resultado = await pedirAjuda({
+      funcao: async () => await supabase.functions.invoke('pedir-ajuda', { body: {} }),
+      banco: async () => await supabase.rpc('pedir_ajuda'),
+    });
+    setEnviandoAjuda(false);
+    setResultadoAjuda(resultado);
+    setModo('avisada');
+    falar(mensagemDaAjuda(resultado).fala);
+  };
 
   const alarme = devidas[0] && <Alarme dose={devidas[0]} apelido={apelido} agora={agora} onTomei={confirmar} />;
 
@@ -129,7 +160,7 @@ function TelaDoDia({
   if (modo === 'avisada') {
     return (
       <>
-        <TelaFamiliaAvisada aoVoltar={() => setModo('inicio')} />
+        <TelaFamiliaAvisada aoVoltar={() => setModo('inicio')} resultado={resultadoAjuda} />
         {alarme}
       </>
     );
@@ -224,6 +255,26 @@ function TelaDoDia({
             {rotuloMic}
           </Destaque>
         </View>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Preciso de ajuda. Avisa toda a sua família agora."
+          accessibilityState={{ busy: enviandoAjuda, disabled: enviandoAjuda }}
+          disabled={enviandoAjuda}
+          onPress={apertarAjuda}
+          style={({ pressed }) => [estilos.ajuda, (pressed || enviandoAjuda) && { opacity: 0.85 }]}
+        >
+          <View style={estilos.ajudaIcone}>
+            {enviandoAjuda ? (
+              <ActivityIndicator color={cores.sobreTinta} />
+            ) : (
+              <IconeTelefone tamanho={24} cor={cores.sobreTinta} traco={2.2} />
+            )}
+          </View>
+          <Texto tamanho={24} peso="negrito" cor={cores.alerta.texto}>
+            {enviandoAjuda ? 'Avisando sua família…' : 'Preciso de ajuda'}
+          </Texto>
+        </Pressable>
       </ScrollView>
       {alarme}
     </SafeAreaView>
@@ -261,6 +312,24 @@ const estilos = StyleSheet.create({
   barra: { flex: 1, height: 10, borderRadius: 5 },
   lia: { backgroundColor: cores.lilas.fundo, borderRadius: 28, padding: 20, gap: 6 },
   blocoMic: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 22, paddingVertical: 28 },
+  ajuda: {
+    minHeight: 72,
+    borderRadius: 36,
+    backgroundColor: cores.alerta.fundo,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+    paddingHorizontal: 20,
+  },
+  ajudaIcone: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: cores.alerta.forte,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   mic: {
     width: alvos.microfone,
     height: alvos.microfone,
