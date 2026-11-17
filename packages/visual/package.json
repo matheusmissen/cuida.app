@@ -1,0 +1,20 @@
+{
+  "name": "@cuida/visual",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tema e componentes base da Variação E (docs/design.md), compartilhados pelos apps do Cuida.",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "node --experimental-strip-types --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@expo-google-fonts/atkinson-hyperlegible": "^0.4.1",
+    "@expo-google-fonts/nunito": "^0.4.2"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*",
+    "react-native-svg": "*"
+  }
+}
