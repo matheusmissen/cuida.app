@@ -8,6 +8,7 @@ Projeto da trilha **Saúde e bem-estar** do Hack Brasil 2026.
 
 ## Links
 
+- Repositório oficial: https://github.com/matheusmissen/cuida.app
 - Demo web: _a definir_
 - Vídeo: _a definir_
 
