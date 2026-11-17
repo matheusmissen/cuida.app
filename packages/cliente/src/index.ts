@@ -5,4 +5,5 @@ export * from './conversa.ts';
 export * from './checkin.ts';
 export * from './documentos.ts';
 export * from './ajuda.ts';
+export * from './condicoes.ts';
 export { criarCliente } from './supabase.ts';

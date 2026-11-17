@@ -8,7 +8,10 @@ export interface Paciente {
   usuario_id: string | null;
   nome: string;
   apelido: string | null;
+  /** Códigos do catálogo de condicoes.ts; só eles ligam modelos de alerta. */
   condicoes: string[];
+  /** Texto livre da família; fica registrado e nunca gera alerta. */
+  outras_condicoes: string | null;
   limite_febre: number;
   ultima_interacao_em: string | null;
   /** 'HH:MM:SS', horário local do check-in diário da Lia; null = desligado. */
@@ -17,7 +20,7 @@ export interface Paciente {
 
 /** Colunas de `pacientes` que os apps leem. */
 export const SELECT_PACIENTE =
-  'id, usuario_id, nome, apelido, condicoes, limite_febre, ultima_interacao_em, horario_checkin';
+  'id, usuario_id, nome, apelido, condicoes, outras_condicoes, limite_febre, ultima_interacao_em, horario_checkin';
 
 export interface Remedio {
   id: string;
