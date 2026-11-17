@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>%WEB_TITLE%</title>
+    <meta name="description" content="Acompanhe de longe os remédios, o check-in e os alertas de quem você cuida." />
+    <!-- PWA (docs/PRD.md, seção 9): instalável na tela inicial, sem loja de apps. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#FBF8F3" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <!-- iPhone: "Adicionar à Tela de Início" abre como app, com este nome e este ícone. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Cuida Família" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="apple-touch-icon" href="/icones/apple-touch-icon.png" />
+    <!-- Estilos recomendados pelo react-native-web: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+        /* Fundo creme desde o primeiro instante (evita o branco antes do app carregar). */
+        background-color: #fbf8f3;
+      }
+      body {
+        overflow: hidden;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>Para usar o Cuida, ative o JavaScript no navegador.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

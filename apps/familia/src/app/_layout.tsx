@@ -6,8 +6,9 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { registrarServiceWorker } from '@cuida/cliente';
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { cores } from '@/components/ui';
 import { fontes } from '@/lib/tema';
 import { PacienteProvider } from '@/lib/paciente';
@@ -68,6 +69,14 @@ export default function Layout() {
     Outfit_500Medium,
   });
   const pronto = carregadas || Boolean(erro);
+
+  // PWA: no navegador, registra o service worker (instalável na tela inicial e abre sem internet).
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    registrarServiceWorker(globalThis.navigator, process.env.NODE_ENV === 'production', (e) =>
+      console.warn('Service worker:', e instanceof Error ? e.message : e),
+    );
+  }, []);
   useEffect(() => {
     if (pronto) SplashScreen.hideAsync().catch(() => {});
   }, [pronto]);

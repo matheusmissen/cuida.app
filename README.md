@@ -133,6 +133,15 @@ Cada app é um projeto separado na Vercel, ligado a este repositório. A configu
 O microfone na web exige HTTPS, que a Vercel já fornece. O Chrome e o Edge têm reconhecimento de fala;
 no Firefox o app do idoso mostra um campo de texto grande.
 
+## Web app instalável (PWA)
+
+Os dois apps rodam no navegador do celular e podem ser instalados na tela inicial, sem loja de apps:
+
+- **iPhone:** abrir no Safari → Compartilhar → "Adicionar à Tela de Início".
+- **Android:** no Chrome, "Instalar app" (ou menu → "Adicionar à tela inicial").
+
+Cada app tem `public/manifest.webmanifest`, ícones em `public/icones/` e um service worker (`public/sw.js`) que guarda só a casca do app para abrir sem internet; dados de saúde (Supabase, Lia) nunca ficam no cache. Teste: `packages/cliente/test/pwa.test.ts`.
+
 ## Fluxo do remédio (etapa 18–21/11)
 
 1. A família cadastra o paciente, os remédios e os horários e gera um código/QR de vínculo.
