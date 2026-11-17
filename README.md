@@ -32,10 +32,32 @@ packages/
   cliente/      cliente Supabase, tipos e utilitários compartilhados pelos apps + testes
 supabase/
   migrations/   esquema do banco com Row Level Security, doses do dia e pg_cron
-  functions/    Edge Functions (Deno): verificar-doses (cron) e agente (Lia); _shared/ e agente/ têm lógica pura testada em Node
-  seed.sql      paciente fictícia "Dona Maria" para a demo
-  tests/        testes manuais de RLS e das funções de doses (psql)
+  functions/    Edge Functions (Deno): verificar-doses (cron), agente (Lia), pedir-ajuda e ler-receita;
+                _shared/ e agente/ têm lógica pura testada em Node
+  seed.sql      paciente fictícia "Dona Maria" com uma semana de doses, check-ins e alertas
+  tests/        testes manuais de RLS, doses, check-in, documentos e pedido de ajuda (psql)
 ```
+
+## Arquitetura
+
+```
+ App do idoso (Expo, web e celular)            App da família (Expo, web e celular)
+  voz no aparelho · alarme "Tomei" ·            painel do dia · remédios · documentos ·
+  check-in · "Preciso de ajuda"                 alertas em tempo real e push
+        │  chave anon + token do aparelho              │  chave anon + login por e-mail
+        ▼                                              ▼
+ ┌──────────────────────────── Supabase (região São Paulo) ────────────────────────────┐
+ │ Postgres com RLS em todas as tabelas · funções SQL (confirmar_dose, pedir_ajuda...) │
+ │ Edge Functions: agente (LLM só extrai dados) · pedir-ajuda · ler-receita ·          │
+ │                 verificar-doses (pg_cron a cada 5 min)                              │
+ │ packages/regras: regras de alerta determinísticas, testadas, sem IA                 │
+ │ Storage privado (documentos) · Realtime (alertas) · push pelo Expo                  │
+ └─────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Quem decide o alerta é código**, nunca o LLM. Se a IA cair, alarmes, botão de ajuda e alerta por
+  silêncio continuam funcionando.
+- **Segredos só no servidor** (Edge Functions e Vault). Os apps usam apenas a chave anon do Supabase.
 
 ## Como rodar
 
@@ -81,6 +103,29 @@ select vault.create_secret('<service role key>', 'service_role_key');
 
 Ligue também o login anônimo (Authentication → Sign In / Providers → Anonymous) para o app do idoso.
 
+Publicar as Edge Functions:
+
+```bash
+supabase secrets set LLM_API_KEY=...
+supabase functions deploy agente pedir-ajuda ler-receita verificar-doses
+```
+
+### Demo web na Vercel
+
+Cada app é um projeto separado na Vercel, ligado a este repositório. A configuração de build já está em
+`apps/idoso/vercel.json` e `apps/familia/vercel.json` (instala o monorepo na raiz, roda
+`expo export --platform web` e serve `dist/` como site de página única).
+
+1. Na Vercel: **Add New → Project**, escolha este repositório e, em **Root Directory**, `apps/idoso`.
+   Deixe ligada a opção de incluir arquivos fora do Root Directory (o app usa `packages/`).
+2. Em **Environment Variables**, cadastre `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+   (só a chave anon; nunca a service role).
+3. Repita com Root Directory `apps/familia`.
+4. No Supabase, em Authentication → URL Configuration, adicione os dois endereços da Vercel.
+
+O microfone na web exige HTTPS, que a Vercel já fornece. O Chrome e o Edge têm reconhecimento de fala;
+no Firefox o app do idoso mostra um campo de texto grande.
+
 ## Fluxo do remédio (etapa 18–21/11)
 
 1. A família cadastra o paciente, os remédios e os horários e gera um código/QR de vínculo.
@@ -120,6 +165,19 @@ Publicar: `supabase functions deploy agente`.
 2. O texto e as últimas 12 falas vão para a Edge Function `agente` (`{ texto, historico }`), com o token do aparelho.
 3. A resposta aparece em letra grande e é falada com `expo-speech`. Se o agente não responder, a Lia avisa
    em voz que não conseguiu e pede para tentar de novo.
+
+## Botão "Preciso de ajuda" (etapa 26–27/11)
+
+Fica sempre no fim da tela inicial do idoso e **não usa IA**:
+
+1. O app chama a Edge Function `pedir-ajuda`, que grava o alerta vermelho pela função do banco
+   `pedir_ajuda()` (com o token do aparelho) e manda push para todo o círculo de cuidado.
+2. Se a Edge Function falhar, o app chama `pedir_ajuda()` direto: o alerta aparece em tempo real no painel
+   da família, sem push.
+3. Se tudo falhar (sem internet), a tela não diz que a família foi avisada: mostra o botão para ligar para o
+   SAMU (192).
+
+Toques repetidos em 2 minutos reaproveitam o mesmo alerta. Teste do banco: `supabase/tests/ajuda_manual.sql`.
 
 ## Check-in diário (etapa 22–25/11)
 
