@@ -44,7 +44,7 @@ select public.gerar_doses_dia();
 \echo '--- 3. Idosa aperta "Tomei": dose tomada, estoque baixa 1, interação registrada'
 set request.jwt.claim.sub = '33333333-3333-4333-8333-333333333333';
 select id as dose_vitamina from public.doses d
- where horario_id = '00000000-0000-4000-8000-0000000000b4' order by previsto_em limit 1 \gset
+ where horario_id = '00000000-0000-4000-8000-0000000000b4' and status = 'pendente' order by previsto_em limit 1 \gset
 select public.confirmar_dose(:'dose_vitamina') is not null as confirmou;
 select public.confirmar_dose(:'dose_vitamina') is not null as toque_duplo_ok;
 reset role;
@@ -54,12 +54,14 @@ select ultima_interacao_em > now() - interval '1 minute' as interacao_registrada
  where id = '00000000-0000-4000-8000-000000000001';
 
 \echo '--- 4. Dose marcada como perdida pelo servidor ainda pode ser confirmada depois'
-update public.doses set status = 'perdido' where horario_id = '00000000-0000-4000-8000-0000000000b3';
+select id as dose_noite from public.doses
+ where horario_id = '00000000-0000-4000-8000-0000000000b3' and status = 'pendente' order by previsto_em limit 1 \gset
+update public.doses set status = 'perdido' where id = :'dose_noite';
 set role authenticated;
 set request.jwt.claim.sub = '33333333-3333-4333-8333-333333333333';
-select public.confirmar_dose((select id from public.doses where status = 'perdido' order by previsto_em limit 1)) is not null as confirmou_atrasada;
+select public.confirmar_dose(:'dose_noite') is not null as confirmou_atrasada;
 reset role;
-select count(*) = 1 as uma_perdida_virou_tomada from public.doses where horario_id = '00000000-0000-4000-8000-0000000000b3' and status = 'tomado';
+select status = 'tomado' as perdida_virou_tomada from public.doses where id = :'dose_noite';
 
 \echo '--- 5. Família apaga doses futuras não tomadas (ao suspender remédio); histórico não'
 insert into public.doses (horario_id, paciente_id, previsto_em) values
