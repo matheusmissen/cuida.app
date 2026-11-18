@@ -30,7 +30,19 @@ export function perguntaDoCheckin(apelido: string, agora: Date): string {
  * Resposta da Lia depois do toque. Nos níveis 4 a 6 ela entra na conversa (a frase fica no histórico
  * do agente, para ele saber o contexto). Nunca diz que o sintoma "não é nada".
  */
-export function respostaAoRostinho(nivel: NivelCheckin, apelido: string): { conversar: boolean; fala: string } {
+export function respostaAoRostinho(
+  nivel: NivelCheckin,
+  apelido: string,
+  /** O idoso concordou em conversar com a Lia (IA)? Sem isso, ela não entra na conversa. */
+  comLia = true,
+): { conversar: boolean; fala: string } {
+  if (precisaConversar(nivel) && !comLia) {
+    const fala =
+      nivel === 6
+        ? `${apelido}, sinto muito que você está muito mal. Quem cuida de você vai ficar sabendo. Se precisar, aperte "Preciso de ajuda".`
+        : `Sinto muito, ${apelido}. Obrigada por me contar. Se precisar, aperte "Preciso de ajuda".`;
+    return { conversar: false, fala };
+  }
   if (!precisaConversar(nivel)) {
     const fala =
       nivel === 3

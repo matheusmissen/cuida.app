@@ -13,3 +13,4 @@ export * from './alertas.ts';
 export * from './grupo.ts';
 export * from './instalacao.ts';
 export * from './rostinho.ts';
+export * from './consentimento.ts';

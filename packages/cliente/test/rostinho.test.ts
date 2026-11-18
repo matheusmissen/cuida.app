@@ -53,3 +53,12 @@ test('painel: a conversa com a Lia herda o rostinho do mesmo dia', async () => {
   assert.equal(checkinDoPainel([lia, ontem])?.nivel, null);
   assert.equal(checkinDoPainel([]), null);
 });
+
+test('sem o consentimento da Lia, os níveis 4 a 6 não abrem a conversa', () => {
+  for (const n of [4, 5, 6] as const) {
+    const r = respostaAoRostinho(n, 'Maria', false);
+    assert.equal(r.conversar, false);
+    assert.match(r.fala, /Preciso de ajuda/);
+    assert.ok(!/Lia/.test(r.fala));
+  }
+});

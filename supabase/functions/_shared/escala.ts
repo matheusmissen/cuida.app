@@ -21,6 +21,14 @@ export interface AlertaAberto {
   acaoEm?: string | null;
 }
 
+/**
+ * Consentimento do idoso (docs/PRD.md, "Dados e LGPD"): sem "mostrar para a família", só o
+ * responsável recebe alertas; os acompanhantes não (a mesma regra de ve_saude no banco).
+ */
+export function quemPodeSerAvisado(cuidadores: Cuidador[], familiaConsentiu: boolean): Cuidador[] {
+  return familiaConsentiu ? cuidadores : cuidadores.filter((c) => c.papel === 'principal');
+}
+
 /** Principal primeiro; depois pela ordem da escala. */
 export function ordemDaEscala(cuidadores: Cuidador[]): Cuidador[] {
   return [...cuidadores].sort((a, b) => {

@@ -3,23 +3,25 @@
 
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import type { Alerta } from '../../../packages/regras/src/index.ts';
-import { destinatariosIniciais, type Cuidador } from './escala.ts';
+import { destinatariosIniciais, quemPodeSerAvisado, type Cuidador } from './escala.ts';
 import { notificacaoDoAlerta } from './lembretes.ts';
 import { notificarUsuarios } from './notificar.ts';
 import { enviarPush, mensagensPush } from './push.ts';
 
+/** Quem do grupo pode receber alertas deste paciente (respeita o consentimento do idoso). */
 export async function carregarCuidadores(supabase: SupabaseClient, pacienteId: string): Promise<Cuidador[]> {
-  const { data, error } = await supabase
-    .from('cuidadores')
-    .select('usuario_id, papel, ordem_escala, expo_push_token')
-    .eq('paciente_id', pacienteId);
+  const [{ data, error }, { data: paciente }] = await Promise.all([
+    supabase.from('cuidadores').select('usuario_id, papel, ordem_escala, expo_push_token').eq('paciente_id', pacienteId),
+    supabase.from('pacientes').select('consente_familia_em').eq('id', pacienteId).maybeSingle(),
+  ]);
   if (error) throw error;
-  return (data ?? []).map((c) => ({
+  const cuidadores: Cuidador[] = (data ?? []).map((c) => ({
     usuarioId: c.usuario_id,
     papel: c.papel,
     ordemEscala: c.ordem_escala,
     pushToken: c.expo_push_token,
   }));
+  return quemPodeSerAvisado(cuidadores, Boolean(paciente?.consente_familia_em));
 }
 
 export async function nomeDoPaciente(supabase: SupabaseClient, pacienteId: string): Promise<string> {

@@ -11,7 +11,7 @@ insert into auth.users (id, email) values
 insert into public.cuidadores (usuario_id, paciente_id, papel, ordem_escala) values
  ('44444444-4444-4444-8444-444444444444','00000000-0000-4000-8000-000000000001','apoio', 2),
  ('11111111-1111-4111-8111-111111111111','00000000-0000-4000-8000-000000000001','principal', 1);
-update public.pacientes set usuario_id = '33333333-3333-4333-8333-333333333333', ultima_interacao_em = now() - interval '5 hours'
+update public.pacientes set usuario_id = '33333333-3333-4333-8333-333333333333', ultima_interacao_em = now() - interval '5 hours', consente_registro_em = now(), consente_familia_em = now()
  where id = '00000000-0000-4000-8000-000000000001';
 -- Um alerta aberto de check-in sem resposta, para ver o rostinho resolver.
 insert into public.alertas (paciente_id, gatilho, nivel, motivo)

@@ -34,6 +34,7 @@ import {
   sairOuRemover,
   salvarMeuNome,
 } from '@/lib/grupo';
+import { CartaoConsentimento } from '@/components/consentimento';
 import { usePaciente } from '@/lib/paciente';
 import { useSessao } from '@/lib/sessao';
 
@@ -124,6 +125,8 @@ export default function Grupo() {
           Alertas críticos vão primeiro para o responsável principal. Se ele não agir a tempo, todo o grupo é
           avisado. Emergências vão para todos na hora.
         </Text>
+
+        {paciente ? <CartaoConsentimento paciente={paciente} papel={papel} completo /> : null}
 
         {aviso ? (
           <Text style={estilos.aviso} accessibilityLiveRegion="polite">
