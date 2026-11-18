@@ -1,4 +1,4 @@
-import { horaDoBanco, lerHora, type Horario, type Remedio } from '@cuida/cliente';
+import { horaDoBanco, lerHora, podeMudarRemedios, type Horario, type Remedio } from '@cuida/cliente';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,7 +15,9 @@ const DIAS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 const DIAS_NOME = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 
 export default function Remedios() {
-  const { paciente } = usePaciente();
+  const { paciente, papel } = usePaciente();
+  // Acompanhante só vê (docs/PRD.md, seção 2); o banco também barra a mudança.
+  const podeEditar = podeMudarRemedios(papel);
   const [remedios, setRemedios] = useState<RemedioComHorarios[]>([]);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -59,7 +61,13 @@ export default function Remedios() {
     <SafeAreaView style={{ flex: 1, backgroundColor: cores.fundo }}>
     <ScrollView contentContainerStyle={estilos.conteudo} keyboardShouldPersistTaps="handled">
       <TituloPagina style={{ paddingHorizontal: 4 }}>Remédios</TituloPagina>
-      <NovoRemedio pacienteId={paciente.id} aoSalvar={carregar} />
+      {podeEditar ? (
+        <NovoRemedio pacienteId={paciente.id} aoSalvar={carregar} />
+      ) : (
+        <Cartao>
+          <Texto suave>Você acompanha os remédios. Só o responsável principal muda a rotina de remédios.</Texto>
+        </Cartao>
+      )}
       <Erro mensagem={erro} />
       {remedios.map((r) => (
         <Cartao key={r.id} style={!r.ativo ? { opacity: 0.6 } : undefined}>
@@ -81,11 +89,13 @@ export default function Remedios() {
           </Texto>
           {r.estoque_doses !== null && <Texto suave>Estoque: {r.estoque_doses} doses</Texto>}
           {!r.ativo && <Texto suave>Suspenso — não toca alarme.</Texto>}
-          <Botao
-            variante={r.ativo ? 'perigo' : 'secundario'}
-            titulo={r.ativo ? 'Suspender' : 'Reativar'}
-            onPress={() => alternarAtivo(r)}
-          />
+          {podeEditar && (
+            <Botao
+              variante={r.ativo ? 'perigo' : 'secundario'}
+              titulo={r.ativo ? 'Suspender' : 'Reativar'}
+              onPress={() => alternarAtivo(r)}
+            />
+          )}
         </Cartao>
       ))}
     </ScrollView>

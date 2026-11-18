@@ -10,3 +10,4 @@ export { criarCliente } from './supabase.ts';
 export * from './pwa.ts';
 export * from './notificacoes.ts';
 export * from './alertas.ts';
+export * from './grupo.ts';

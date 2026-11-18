@@ -1,5 +1,7 @@
 import { condicoesParaSalvar } from '@cuida/cliente';
+import { router } from 'expo-router';
 import { useState } from 'react';
+import { View } from 'react-native';
 import { CondicoesSaude, formDoPaciente, type FormCondicoes } from '@/components/condicoes-saude';
 import { Opcao } from '@/components/opcao';
 import { Botao, Campo, Cartao, Erro, Texto, Titulo } from '@/components/ui';
@@ -41,6 +43,12 @@ export function CadastroPaciente() {
   }
 
   return (
+    <View style={{ gap: 12 }}>
+    <Cartao>
+      <Titulo>Recebeu um convite?</Titulo>
+      <Texto suave>Se alguém da família já cadastrou a pessoa e te convidou, entre no grupo com o código.</Texto>
+      <Botao variante="secundario" titulo="Tenho um código de convite" onPress={() => router.push('/convite')} />
+    </Cartao>
     <Cartao>
       <Titulo>Quem você vai cuidar?</Titulo>
       <Texto suave>Você será o responsável principal. Depois cadastre os remédios e vincule o celular.</Texto>
@@ -59,5 +67,6 @@ export function CadastroPaciente() {
       <Erro mensagem={erro} />
       <Botao titulo="Cadastrar" onPress={salvar} carregando={enviando} />
     </Cartao>
+    </View>
   );
 }
