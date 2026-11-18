@@ -105,4 +105,6 @@ export interface CheckinLinha {
   confuso: boolean | null;
   sono: string | null;
   notas: string | null;
+  /** Rostinho do check-in: 1 = muito bem … 6 = muito mal (nulo nos registros da conversa com a Lia). */
+  nivel?: number | null;
 }

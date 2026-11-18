@@ -25,6 +25,7 @@
     "pedir-ajuda/index.ts",
     "agente/index.ts",
     "ler-receita/index.ts",
-    "reenviar-lembrete/index.ts"
+    "reenviar-lembrete/index.ts",
+    "registrar-checkin/index.ts"
   ]
 }

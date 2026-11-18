@@ -68,6 +68,28 @@ export function Rostinho({ nivel, selecionado, onPress, tamanho = rostinhoTamanh
   );
 }
 
+/** Rostinho só para mostrar (painel da família): sem toque e sem rótulo; o rótulo vai no texto ao lado. */
+export function SeloRostinho({ nivel, tamanho = 56 }: { nivel: NivelRostinho; tamanho?: number }) {
+  const r = rostinhos[nivel];
+  return (
+    <View
+      accessibilityLabel={`${r.rotulo}, nível ${nivel} de 6`}
+      style={{
+        width: tamanho,
+        height: tamanho,
+        borderRadius: Math.round(raios.rostinho * (tamanho / rostinhoTamanho)),
+        borderWidth: bordas.rostinho,
+        backgroundColor: r.fundo,
+        borderColor: r.borda,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Rosto nivel={nivel} tamanho={tamanho - 6} />
+    </View>
+  );
+}
+
 /** Grade de 3 colunas com os 6 níveis. */
 export function GradeRostinhos({ valor, aoEscolher }: { valor?: NivelRostinho | null; aoEscolher: (n: NivelRostinho) => void }) {
   return (

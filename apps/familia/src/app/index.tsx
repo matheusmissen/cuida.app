@@ -1,5 +1,6 @@
 // Painel do dia da família (referências: docs/design/telas/Familia-Painel.dc.html e Familia-Alerta.dc.html).
 import {
+  checkinDoPainel,
   horaCurta,
   SELECT_DOSE,
   situacaoDose,
@@ -111,10 +112,10 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
         .select('*')
         .eq('paciente_id', pacienteId)
         .order('feito_em', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(5),
     ]);
-    setUltimoCheckin((c.data as CheckinLinha | null) ?? null);
+    // O rostinho e a conversa com a Lia do mesmo dia aparecem juntos.
+    setUltimoCheckin(checkinDoPainel((c.data as CheckinLinha[] | null) ?? []));
     setErro(d.error?.message ?? a.error?.message ?? null);
     setDoses((d.data as unknown as DoseComRemedio[]) ?? []);
     setAlertas((a.data as AlertaLinha[]) ?? []);
