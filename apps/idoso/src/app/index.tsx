@@ -1,6 +1,6 @@
 // Tela única do idoso (referência: docs/design/telas/Idoso-Inicio.dc.html).
-// Início → (toque no microfone ou chamada do check-in) → conversa com a Lia → "Voltar ao início".
-// O alarme de remédio aparece por cima de tudo e tem prioridade sobre o check-in.
+// Check-in do dia (6 rostinhos, antes de tudo) → início → (microfone) → conversa com a Lia → "Voltar ao início".
+// Nos 3 rostinhos mais baixos, a Lia entra na conversa. O alarme de remédio aparece por cima de tudo.
 // "Preciso de ajuda" fica sempre no fim do início e não depende da IA (pedir-ajuda → pedir_ajuda()).
 import {
   dataCurta,
@@ -9,7 +9,10 @@ import {
   horaCurta,
   mensagemDaAjuda,
   pedirAjuda,
+  perguntaDoCheckin,
   proximaDose,
+  registrarRostinho,
+  respostaAoRostinho,
   saudacao,
   type ResultadoAjuda,
 } from '@cuida/cliente';
@@ -17,9 +20,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { temposDoPaciente, type Tempos } from '@cuida/regras';
+import { temposDoPaciente, type NivelCheckin, type Tempos } from '@cuida/regras';
 import { Alarme } from '@/components/alarme';
 import { AvisosNotificacao } from '@/components/avisos-notificacao';
+import { TelaCheckin } from '@/components/checkin';
 import { TelaConversa } from '@/components/conversa';
 import { TelaFamiliaAvisada } from '@/components/familia-avisada';
 import { IconeMicrofone, IconeTelefone } from '@/components/icones';
@@ -121,6 +125,11 @@ function TelaDoDia({
   // Na web o navegador só deixa falar depois de um toque: um botão "Começar" na abertura.
   const [iniciado, setIniciado] = useState(Platform.OS !== 'web');
   const chamadas = useRef(new Set<string>());
+  // Check-in com rostinhos: escolhido, gravando e erro (sem internet).
+  const [rostinho, setRostinho] = useState<NivelCheckin | null>(null);
+  const [gravandoRostinho, setGravandoRostinho] = useState(false);
+  const [erroRostinho, setErroRostinho] = useState<string | null>(null);
+  const [checkinFeito, setCheckinFeito] = useState<string | null>(null); // chave do dia já respondido
   const ultimaFala = useUltimaFala();
 
   const devidas = dosesDevidas(doses, agora);
@@ -130,15 +139,42 @@ function TelaDoDia({
   const dosesHoje = doses.filter((d) => fmtDia.format(new Date(d.previsto_em)) === hoje);
   const tomadasHoje = dosesHoje.filter((d) => d.confirmado_em).length;
 
-  // Check-in diário: a Lia puxa a conversa uma vez por tentativa, depois de qualquer alarme.
+  // Check-in diário: a tela dos rostinhos vem antes de tudo; a Lia faz a pergunta uma vez por dia,
+  // depois de qualquer alarme.
   const alarmeAberto = Boolean(devidas[0]);
+  const mostrarCheckin = Boolean(convite) && checkinFeito !== convite?.chave && modo === 'inicio';
   useEffect(() => {
-    if (!iniciado || alarmeAberto || !convite || conversa.estado !== 'parada') return;
+    if (!iniciado || alarmeAberto || !mostrarCheckin || !convite) return;
     if (chamadas.current.has(convite.chave)) return;
     chamadas.current.add(convite.chave);
-    setModo('conversa');
-    conversa.iniciarPelaLia(convite.frase);
-  }, [iniciado, alarmeAberto, convite, conversa]);
+    falar(perguntaDoCheckin(apelido, new Date()));
+  }, [iniciado, alarmeAberto, mostrarCheckin, convite, apelido]);
+
+  const escolherRostinho = async (nivel: NivelCheckin) => {
+    if (gravandoRostinho || !convite) return;
+    setRostinho(nivel);
+    setErroRostinho(null);
+    setGravandoRostinho(true);
+    const gravou = await registrarRostinho({
+      funcao: async () => await supabase.functions.invoke('registrar-checkin', { body: { nivel } }),
+      banco: async () => await supabase.rpc('registrar_rostinho', { p_nivel: nivel }),
+    });
+    setGravandoRostinho(false);
+    if (!gravou) {
+      setErroRostinho('Não consegui guardar agora. Verifique a internet e toque de novo.');
+      return;
+    }
+    setCheckinFeito(convite.chave);
+    setRostinho(null);
+    recarregarCheckin();
+    const resposta = respostaAoRostinho(nivel, apelido);
+    if (resposta.conversar) {
+      setModo('conversa');
+      conversa.iniciarPelaLia(resposta.fala);
+    } else {
+      falar(resposta.fala);
+    }
+  };
 
   // Pedido de ajuda registrado pelo agente: mostra "Sua família foi avisada".
   useEffect(() => {
@@ -162,6 +198,28 @@ function TelaDoDia({
     falar(mensagemDaAjuda(resultado).fala);
   };
 
+  const botaoAjuda = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Preciso de ajuda. Avisa toda a sua família agora."
+      accessibilityState={{ busy: enviandoAjuda, disabled: enviandoAjuda }}
+      disabled={enviandoAjuda}
+      onPress={apertarAjuda}
+      style={({ pressed }) => [estilos.ajuda, (pressed || enviandoAjuda) && { opacity: 0.85 }]}
+    >
+      <View style={estilos.ajudaIcone}>
+        {enviandoAjuda ? (
+          <ActivityIndicator color={cores.sobreTinta} />
+        ) : (
+          <IconeTelefone tamanho={24} cor={cores.sobreTinta} traco={2.2} />
+        )}
+      </View>
+      <Texto tamanho={24} peso="negrito" cor={cores.alerta.texto}>
+        {enviandoAjuda ? 'Avisando sua família…' : 'Preciso de ajuda'}
+      </Texto>
+    </Pressable>
+  );
+
   const alarme = devidas[0] && <Alarme dose={devidas[0]} apelido={apelido} agora={agora} tempos={tempos} onTomei={confirmar} />;
 
   if (!iniciado) {
@@ -181,6 +239,22 @@ function TelaDoDia({
           }}
         />
       </SafeAreaView>
+    );
+  }
+
+  if (mostrarCheckin) {
+    return (
+      <>
+        <TelaCheckin
+          agora={agora}
+          escolhido={rostinho}
+          enviando={gravandoRostinho}
+          erro={erroRostinho}
+          onEscolher={escolherRostinho}
+          botaoAjuda={botaoAjuda}
+        />
+        {alarme}
+      </>
     );
   }
 
@@ -293,25 +367,7 @@ function TelaDoDia({
           </Destaque>
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Preciso de ajuda. Avisa toda a sua família agora."
-          accessibilityState={{ busy: enviandoAjuda, disabled: enviandoAjuda }}
-          disabled={enviandoAjuda}
-          onPress={apertarAjuda}
-          style={({ pressed }) => [estilos.ajuda, (pressed || enviandoAjuda) && { opacity: 0.85 }]}
-        >
-          <View style={estilos.ajudaIcone}>
-            {enviandoAjuda ? (
-              <ActivityIndicator color={cores.sobreTinta} />
-            ) : (
-              <IconeTelefone tamanho={24} cor={cores.sobreTinta} traco={2.2} />
-            )}
-          </View>
-          <Texto tamanho={24} peso="negrito" cor={cores.alerta.texto}>
-            {enviandoAjuda ? 'Avisando sua família…' : 'Preciso de ajuda'}
-          </Texto>
-        </Pressable>
+        {botaoAjuda}
       </ScrollView>
       {alarme}
     </SafeAreaView>

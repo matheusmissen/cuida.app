@@ -185,6 +185,28 @@ export function avaliarCheckinSemResposta(minutosSemResposta: number, tempos: Te
   };
 }
 
+/** Nível escolhido nos rostinhos do check-in (docs/PRD.md, seção 4): 1 = muito bem … 6 = muito mal. */
+export type NivelCheckin = 1 | 2 | 3 | 4 | 5 | 6;
+
+/** Nos 3 níveis mais baixos (4, 5 e 6), a Lia entra na conversa para entender melhor. */
+export function precisaConversar(nivel: NivelCheckin): boolean {
+  return nivel >= 4;
+}
+
+/**
+ * Rede de segurança do rostinho, sem depender da Lia: "Muito mal" avisa o responsável (laranja,
+ * com escalada). Os níveis 4 e 5 só abrem a conversa; o que o idoso contar passa por avaliarCheckin.
+ * A função do banco `registrar_rostinho` grava este mesmo alerta (teste em rostinho.test.ts).
+ */
+export function avaliarRostinho(nivel: NivelCheckin): Alerta | null {
+  if (nivel !== 6) return null;
+  return {
+    nivel: 'laranja',
+    gatilho: 'geral.checkin_muito_mal',
+    motivo: 'Respondeu "Muito mal" no check-in.',
+  };
+}
+
 /** Botão "Preciso de ajuda". */
 export function pedidoDeAjuda(motivo?: string): Alerta {
   return {

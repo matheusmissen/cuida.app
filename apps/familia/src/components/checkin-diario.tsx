@@ -2,6 +2,7 @@
 // A situação de hoje usa situacaoDoCheckin (packages/regras), a mesma conta do servidor.
 import { horaCurta, horaDoBanco, lerHora, resumoDoCheckin, type CheckinLinha } from '@cuida/cliente';
 import { minutosPorExtenso, situacaoDoCheckin, temposDoPaciente, tentativasDoCheckin, type Tempos } from '@cuida/regras';
+import { rostinhos, SeloRostinho, type NivelRostinho } from '@cuida/visual';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { Botao, Campo, Cartao, Erro, Selo, Texto, Titulo } from '@/components/ui';
@@ -46,6 +47,15 @@ export function CartaoUltimoCheckin({ ultimo, agora }: { ultimo: CheckinLinha | 
       </Titulo>
       {ultimo ? (
         <>
+          {ultimo.nivel ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <SeloRostinho nivel={ultimo.nivel as NivelRostinho} />
+              <Texto style={{ flex: 1 }}>
+                Respondeu <Texto negrito>{rostinhos[ultimo.nivel as NivelRostinho].rotulo}</Texto>
+                {ultimo.nivel >= 4 ? '. A Lia entrou na conversa.' : '.'}
+              </Texto>
+            </View>
+          ) : null}
           {resumo.length > 0 ? (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
               {resumo.map((r) => (
