@@ -86,3 +86,24 @@ export function notificacaoDoCheckin(apelido: string, agora: Date): Notificacao 
     urgente: false,
   };
 }
+
+/**
+ * "Reenviar lembrete" (tela do alerta da família): o que vai para o celular do idoso.
+ * Dose → o lembrete do remédio; check-in → o do check-in; outros → um chamado para abrir o Cuida.
+ */
+export function notificacaoDeReenvio(
+  gatilho: string,
+  apelido: string,
+  agora: Date,
+  dose?: { id: string; nomeRemedio: string; dose: string | null } | null,
+): Notificacao {
+  if (gatilho.startsWith('dose.') && dose) return notificacaoDoRemedio(dose.id, dose.nomeRemedio, dose.dose);
+  if (gatilho === 'geral.checkin_sem_resposta') return notificacaoDoCheckin(apelido, agora);
+  return {
+    titulo: `${apelido}, sua família quer saber de você`,
+    corpo: 'Abra o Cuida e fale com a Lia.',
+    url: '/',
+    etiqueta: 'familia-chamou',
+    urgente: true,
+  };
+}

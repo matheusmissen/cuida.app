@@ -9,3 +9,4 @@ export * from './condicoes.ts';
 export { criarCliente } from './supabase.ts';
 export * from './pwa.ts';
 export * from './notificacoes.ts';
+export * from './alertas.ts';

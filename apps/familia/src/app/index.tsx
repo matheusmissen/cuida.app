@@ -7,13 +7,15 @@ import {
   type CheckinLinha,
   type DoseComRemedio,
   type SituacaoDose,
+  SELECT_ALERTA,
 } from '@cuida/cliente';
 import { temposDoPaciente } from '@cuida/regras';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CartaoUrgente, TelaAlerta, useAvisoUrgente } from '@/components/alerta-urgente';
+import { CartaoUrgente, useAvisoUrgente } from '@/components/alerta-urgente';
+import { TelaAlerta } from '@/components/tela-alerta';
 import { CadastroPaciente } from '@/components/cadastro-paciente';
 import { CartaoUltimoCheckin } from '@/components/checkin-diario';
 import { CartaoNotificacoes } from '@/components/notificacoes';
@@ -99,7 +101,7 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
         .order('previsto_em'),
       supabase
         .from('alertas')
-        .select('id, paciente_id, gatilho, nivel, motivo, criado_em, visto_em')
+        .select(SELECT_ALERTA)
         .eq('paciente_id', pacienteId)
         .order('criado_em', { ascending: false })
         .limit(20),
@@ -144,14 +146,6 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
     }, [carregar]),
   );
 
-  async function marcarVisto(id: string) {
-    await supabase
-      .from('alertas')
-      .update({ visto_em: new Date().toISOString(), visto_por: sessao?.user.id })
-      .eq('id', id);
-    carregar();
-  }
-
   async function confirmarPelaFamilia(id: string) {
     const { error } = await supabase.rpc('confirmar_dose', { p_dose: id });
     if (error) setErro(error.message);
@@ -168,17 +162,15 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
   useAvisoUrgente(urgentes, nome);
 
   const aberto = alertas.find((a) => a.id === alertaAberto);
-  if (aberto) {
+  if (aberto && paciente) {
     return (
       <TelaAlerta
         alerta={aberto}
-        nomePaciente={nome}
+        paciente={paciente}
+        usuarioId={sessao?.user.id}
         ultimoCheckin={ultimoCheckin}
         onVoltar={() => setAlertaAberto(null)}
-        onVisto={async (id) => {
-          await marcarVisto(id);
-          setAlertaAberto(null);
-        }}
+        onAtualizar={carregar}
       />
     );
   }

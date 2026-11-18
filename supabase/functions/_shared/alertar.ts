@@ -50,6 +50,8 @@ export async function criarEAvisar(
   pacienteId: string,
   alerta: Alerta,
   regraId: string | null = null,
+  /** Colunas extras do alerta, por exemplo { dose_id } para alertas de dose. */
+  extras: Record<string, unknown> = {},
 ): Promise<string> {
   const cuidadores = await carregarCuidadores(supabase, pacienteId);
   const destinatarios = destinatariosIniciais(alerta.nivel, cuidadores);
@@ -62,6 +64,7 @@ export async function criarEAvisar(
       nivel: alerta.nivel,
       motivo: alerta.motivo,
       avisados: destinatarios.map((c) => c.usuarioId),
+      ...extras,
     })
     .select('id')
     .single();

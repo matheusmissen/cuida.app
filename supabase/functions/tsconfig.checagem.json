@@ -8,15 +8,23 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,
-    "lib": ["ES2022", "DOM"],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
     "types": [],
-    "paths": { "npm:@supabase/supabase-js@2": ["../../node_modules/@supabase/supabase-js"] }
+    "paths": {
+      "npm:@supabase/supabase-js@2": [
+        "../../node_modules/@supabase/supabase-js"
+      ]
+    }
   },
   "files": [
     "_tipos/deno.d.ts",
     "verificar-doses/index.ts",
     "pedir-ajuda/index.ts",
     "agente/index.ts",
-    "ler-receita/index.ts"
+    "ler-receita/index.ts",
+    "reenviar-lembrete/index.ts"
   ]
 }

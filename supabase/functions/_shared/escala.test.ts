@@ -39,6 +39,12 @@ test('escalada configurável: 1 minuto na demonstração', () => {
   assert.equal(proximosDaEscala(alerta, circulo, depois(1), 1).length, 2);
 });
 
+test('reenviar o lembrete dá mais 15 min ao responsável antes de avisar o grupo', () => {
+  const alerta = { nivel: 'laranja' as const, criadoEm, avisados: ['neto'], vistoEm: null, acaoEm: depois(10).toISOString() };
+  assert.deepEqual(proximosDaEscala(alerta, circulo, depois(20)), [], '15 min contados do reenvio (aos 10)');
+  assert.equal(proximosDaEscala(alerta, circulo, depois(25)).length, 2);
+});
+
 test('depois de avisar todos, não repete', () => {
   const todos = { nivel: 'laranja' as const, criadoEm, avisados: ['neto', 'filha', 'vizinha'], vistoEm: null };
   assert.deepEqual(proximosDaEscala(todos, circulo, depois(200)), []);

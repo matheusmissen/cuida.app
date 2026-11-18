@@ -17,6 +17,8 @@ export interface AlertaAberto {
   criadoEm: string;
   avisados: string[];
   vistoEm: string | null;
+  /** Última ação do responsável ("Reenviar lembrete"): a escalada recomeça a contar daqui. */
+  acaoEm?: string | null;
 }
 
 /** Principal primeiro; depois pela ordem da escala. */
@@ -35,9 +37,17 @@ export function destinatariosIniciais(nivel: Nivel, cuidadores: Cuidador[]): Cui
   return []; // amarelo vai no resumo diário; informativo fica só no histórico
 }
 
+/** Desde quando a escalada conta: a criação do alerta ou a última ação do responsável. */
+export function inicioDaEscalada(alerta: Pick<AlertaAberto, 'criadoEm' | 'acaoEm'>): number {
+  const criado = Date.parse(alerta.criadoEm);
+  const acao = alerta.acaoEm ? Date.parse(alerta.acaoEm) : NaN;
+  return Number.isFinite(acao) && acao > criado ? acao : criado;
+}
+
 /**
- * Para um alerta laranja que ninguém marcou como visto: quem ainda precisa ser avisado agora.
- * "Agir" = marcar o alerta como visto no app da família ("Vi, estou cuidando").
+ * Para um alerta laranja não resolvido: quem ainda precisa ser avisado agora.
+ * "Agir" = resolver o alerta ("Já falei com ela, está tudo bem") ou reenviar o lembrete,
+ * que dá mais `escaladaMin` minutos antes de avisar o grupo.
  */
 export function proximosDaEscala(
   alerta: AlertaAberto,
@@ -46,6 +56,6 @@ export function proximosDaEscala(
   escaladaMin: number = TEMPOS_PADRAO.escaladaMin,
 ): Cuidador[] {
   if (alerta.nivel !== 'laranja' || alerta.vistoEm) return [];
-  if (agora.getTime() - Date.parse(alerta.criadoEm) < escaladaMin * 60_000) return [];
+  if (agora.getTime() - inicioDaEscalada(alerta) < escaladaMin * 60_000) return [];
   return ordemDaEscala(cuidadores).filter((c) => !alerta.avisados.includes(c.usuarioId));
 }

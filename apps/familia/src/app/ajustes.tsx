@@ -1,4 +1,4 @@
-import { condicoesParaSalvar } from '@cuida/cliente';
+import { condicoesParaSalvar, lerTelefone, telefoneFormatado } from '@cuida/cliente';
 import {
   emModoDemonstracao,
   minutosPorExtenso,
@@ -15,7 +15,7 @@ import { HorarioCheckin } from '@/components/checkin-diario';
 import { CartaoNotificacoes } from '@/components/notificacoes';
 import { CondicoesSaude, formDoPaciente, type FormCondicoes } from '@/components/condicoes-saude';
 import { BarraNavegacao, ESPACO_BARRA } from '@/components/navegacao';
-import { Botao, Cartao, Erro, Texto, Titulo, TituloPagina } from '@/components/ui';
+import { Botao, Campo, Cartao, Erro, Texto, Titulo, TituloPagina } from '@/components/ui';
 import { usePaciente } from '@/lib/paciente';
 import { supabase } from '@/lib/supabase';
 import { espacos, paleta } from '@/lib/tema';
@@ -29,6 +29,7 @@ export default function Ajustes() {
         <TituloPagina style={{ paddingHorizontal: 4 }}>Ajustes</TituloPagina>
         {paciente && <HorarioCheckin />}
         <CartaoNotificacoes />
+        {paciente && <TelefoneDoPaciente />}
         {paciente && <TemposDosAvisos />}
         {paciente && <CondicoesDoPaciente />}
         {paciente && (
@@ -47,6 +48,52 @@ export default function Ajustes() {
       </ScrollView>
       <BarraNavegacao ativa="ajustes" />
     </SafeAreaView>
+  );
+}
+
+/** Telefone do idoso, para o botão "Ligar" da tela do alerta. */
+function TelefoneDoPaciente() {
+  const { paciente, recarregar } = usePaciente();
+  const [texto, setTexto] = useState(paciente?.telefone ? telefoneFormatado(paciente.telefone) : '');
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  if (!paciente) return null;
+  const nome = paciente.apelido || paciente.nome;
+
+  async function salvar() {
+    if (!paciente) return;
+    setErro(null);
+    setAviso(null);
+    const telefone = texto.trim() ? lerTelefone(texto) : null;
+    if (texto.trim() && !telefone) return setErro('Telefone inválido. Use o DDD, por exemplo: (11) 98765-4321');
+    setSalvando(true);
+    const { error } = await supabase.from('pacientes').update({ telefone }).eq('id', paciente.id);
+    setSalvando(false);
+    if (error) return setErro(error.message);
+    setAviso(telefone ? 'Telefone salvo.' : 'Telefone apagado.');
+    await recarregar();
+  }
+
+  return (
+    <Cartao>
+      <Titulo>Telefone de {nome}</Titulo>
+      <Texto suave>Usado no botão "Ligar" quando chega um alerta.</Texto>
+      <Campo
+        rotulo="Telefone com DDD"
+        value={texto}
+        onChangeText={(v) => {
+          setAviso(null);
+          setTexto(v);
+        }}
+        placeholder="(11) 98765-4321"
+        keyboardType="phone-pad"
+        autoComplete="tel"
+      />
+      <Erro mensagem={erro} />
+      {aviso && <Texto suave>{aviso}</Texto>}
+      <Botao variante="secundario" titulo="Salvar telefone" onPress={salvar} carregando={salvando} />
+    </Cartao>
   );
 }
 
