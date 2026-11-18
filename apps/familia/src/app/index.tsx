@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CartaoUrgente, useAvisoUrgente } from '@/components/alerta-urgente';
 import { TelaAlerta } from '@/components/tela-alerta';
 import { CadastroPaciente } from '@/components/cadastro-paciente';
+import { CartaoConsentimento } from '@/components/consentimento';
 import { CartaoUltimoCheckin } from '@/components/checkin-diario';
 import { CartaoNotificacoes } from '@/components/notificacoes';
 import { BarraNavegacao, ESPACO_BARRA } from '@/components/navegacao';
@@ -81,7 +82,7 @@ export default function Painel() {
 }
 
 function PainelDoDia({ pacienteId }: { pacienteId: string }) {
-  const { paciente } = usePaciente();
+  const { paciente, papel } = usePaciente();
   const { sessao } = useSessao();
   const [doses, setDoses] = useState<DoseComRemedio[]>([]);
   const [alertas, setAlertas] = useState<AlertaLinha[]>([]);
@@ -246,6 +247,8 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
                 </Text>
               </View>
             </View>
+
+            {paciente ? <CartaoConsentimento paciente={paciente} papel={papel} /> : null}
 
             {!paciente?.usuario_id && (
               <Cartao>

@@ -22,11 +22,17 @@ export interface Paciente {
   escalada_min: number;
   /** Telefone do idoso (só dígitos), para "Ligar para o idoso". */
   telefone: string | null;
+  /** Consentimento do idoso por finalidade (null = não concordou ou ainda não respondeu). */
+  consente_registro_em?: string | null;
+  consente_familia_em?: string | null;
+  consente_lia_em?: string | null;
+  /** Quando o idoso respondeu a tela de consentimento (null = aguardando). */
+  consentimento_respondido_em?: string | null;
 }
 
 /** Colunas de `pacientes` que os apps leem. */
 export const SELECT_PACIENTE =
-  'id, usuario_id, nome, apelido, condicoes, outras_condicoes, limite_febre, ultima_interacao_em, horario_checkin, tolerancia_dose_min, tolerancia_checkin_min, escalada_min, telefone';
+  'id, usuario_id, nome, apelido, condicoes, outras_condicoes, limite_febre, ultima_interacao_em, horario_checkin, tolerancia_dose_min, tolerancia_checkin_min, escalada_min, telefone, consente_registro_em, consente_familia_em, consente_lia_em, consentimento_respondido_em';
 
 export interface Remedio {
   id: string;

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { destinatariosIniciais, ordemDaEscala, proximosDaEscala, type Cuidador } from './escala.ts';
+import { destinatariosIniciais, ordemDaEscala, proximosDaEscala, quemPodeSerAvisado, type Cuidador } from './escala.ts';
 
 const filha: Cuidador = { usuarioId: 'filha', papel: 'apoio', ordemEscala: 2, pushToken: 'ExponentPushToken[b]' };
 const neto: Cuidador = { usuarioId: 'neto', papel: 'principal', ordemEscala: 1, pushToken: 'ExponentPushToken[a]' };
@@ -58,4 +58,12 @@ test('alerta visto (responsável agiu) para a escala', () => {
 test('vermelho não escala (já avisou todos)', () => {
   const alerta = { nivel: 'vermelho' as const, criadoEm, avisados: [], vistoEm: null };
   assert.deepEqual(proximosDaEscala(alerta, circulo, depois(90)), []);
+});
+
+test('sem o consentimento "mostrar para a família", só o responsável é avisado (nem na emergência)', () => {
+  const grupo = quemPodeSerAvisado(circulo, false);
+  assert.deepEqual(grupo.map((c) => c.usuarioId), ['neto']);
+  assert.deepEqual(destinatariosIniciais('vermelho', grupo).map((c) => c.usuarioId), ['neto']);
+  assert.deepEqual(proximosDaEscala({ nivel: 'laranja', criadoEm, avisados: ['neto'], vistoEm: null }, grupo, depois(60)), []);
+  assert.equal(quemPodeSerAvisado(circulo, true).length, 3);
 });

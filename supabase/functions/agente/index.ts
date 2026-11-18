@@ -91,6 +91,9 @@ async function registrarCheckin(
   return alertas;
 }
 
+const RESPOSTA_SEM_CONSENTIMENTO =
+  'Para conversar comigo sobre a sua saúde, eu preciso da sua permissão. Se precisar, aperte "Preciso de ajuda".';
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ erro: 'use POST' }, 405);
@@ -114,10 +117,14 @@ Deno.serve(async (req) => {
   const db = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
   const { data: paciente } = await db
     .from('pacientes')
-    .select('id, nome, apelido, condicoes, limite_febre')
+    .select('id, nome, apelido, condicoes, limite_febre, consente_lia_em')
     .eq('usuario_id', usuario.user.id)
     .single();
   if (!paciente) return json({ erro: 'aparelho não vinculado' }, 403);
+  // Consentimento do idoso (docs/PRD.md, "Dados e LGPD"): sem "conversar com a Lia", a fala não é processada.
+  if (!paciente.consente_lia_em) {
+    return json({ resposta: RESPOSTA_SEM_CONSENTIMENTO, alertas: [] });
+  }
   await comoIdoso.rpc('registrar_interacao');
 
   const config = { condicoes: (paciente.condicoes ?? []) as string[], limiteFebre: Number(paciente.limite_febre ?? 37.8) };

@@ -8,12 +8,14 @@ import {
   ehPedidoDeAjuda,
   horaCurta,
   mensagemDaAjuda,
+  consentimentoDoPaciente,
   pedirAjuda,
   perguntaDoCheckin,
   proximaDose,
   registrarRostinho,
   respostaAoRostinho,
   saudacao,
+  type Escolhas,
   type ResultadoAjuda,
 } from '@cuida/cliente';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,6 +26,7 @@ import { temposDoPaciente, type NivelCheckin, type Tempos } from '@cuida/regras'
 import { Alarme } from '@/components/alarme';
 import { AvisosNotificacao } from '@/components/avisos-notificacao';
 import { TelaCheckin } from '@/components/checkin';
+import { TelaConsentimento } from '@/components/consentimento';
 import { TelaConversa } from '@/components/conversa';
 import { TelaFamiliaAvisada } from '@/components/familia-avisada';
 import { IconeMicrofone, IconeTelefone } from '@/components/icones';
@@ -47,7 +50,22 @@ const FALA_RECENTE_MS = 90_000;
 const CHAVE_AVISOS_PERGUNTADOS = 'cuida.avisos_perguntados';
 
 export default function Inicio() {
-  const { carregando, paciente, erro } = useAparelho();
+  const { carregando, paciente, erro, recarregar } = useAparelho();
+  const [gravandoConsentimento, setGravandoConsentimento] = useState(false);
+  const [erroConsentimento, setErroConsentimento] = useState<string | null>(null);
+  const responderConsentimento = async (escolhas: Escolhas): Promise<boolean> => {
+    setErroConsentimento(null);
+    setGravandoConsentimento(true);
+    const { error } = await supabase.rpc('registrar_consentimento', {
+      p_registro: escolhas.registro,
+      p_familia: escolhas.familia,
+      p_lia: escolhas.lia,
+    });
+    if (!error) await recarregar();
+    setGravandoConsentimento(false);
+    if (error) setErroConsentimento('Não consegui guardar agora. Verifique a internet e toque de novo.');
+    return !error;
+  };
   const instalacao = useInstalacao();
   const notificacoes = useNotificacoes();
   // Os avisos são pedidos uma vez, logo depois do código (docs/PRD.md, tela 2 do idoso).
@@ -81,6 +99,18 @@ export default function Inicio() {
     if (instalacao.mostrarTela) return <TelaInstalar instalacao={instalacao} />;
     return <PrimeiroAcesso />;
   }
+  const apelidoDoPaciente = paciente.apelido || paciente.nome.split(' ')[0];
+  // Tela 3: consentimento do idoso, uma vez, antes de tudo (docs/PRD.md, "Dados e LGPD").
+  if (!paciente.consentimento_respondido_em) {
+    return (
+      <TelaConsentimento
+        apelido={apelidoDoPaciente}
+        enviando={gravandoConsentimento}
+        erro={erroConsentimento}
+        onConfirmar={responderConsentimento}
+      />
+    );
+  }
   if (avisosPerguntados === false && notificacoes.estado === 'pedir') {
     return (
       <PedirAvisos
@@ -96,26 +126,41 @@ export default function Inicio() {
   return (
     <TelaDoDia
       pacienteId={paciente.id}
-      apelido={paciente.apelido || paciente.nome.split(' ')[0]}
+      apelido={apelidoDoPaciente}
       horarioCheckin={paciente.horario_checkin}
       tempos={temposDoPaciente(paciente)}
+      consentimento={consentimentoDoPaciente(paciente).escolhas}
+      privacidade={{
+        enviando: gravandoConsentimento,
+        erro: erroConsentimento,
+        responder: responderConsentimento,
+      }}
     />
   );
 }
 
-type Modo = 'inicio' | 'conversa' | 'avisada';
+type Modo = 'inicio' | 'conversa' | 'avisada' | 'privacidade';
 
 function TelaDoDia({
   pacienteId,
   apelido,
   horarioCheckin,
   tempos,
+  consentimento,
+  privacidade,
 }: {
   pacienteId: string;
   apelido: string;
   horarioCheckin: string | null;
   tempos: Tempos;
+  consentimento: Escolhas;
+  privacidade: {
+    enviando: boolean;
+    erro: string | null;
+    responder: (e: Escolhas) => Promise<boolean>;
+  };
 }) {
+  const comLia = consentimento.lia;
   const { doses, agora, confirmar } = useDoses(pacienteId);
   const { convite, recarregar: recarregarCheckin } = useCheckin(pacienteId, apelido, horarioCheckin, agora);
   const conversa = useConversa({ aoResponder: recarregarCheckin });
@@ -134,7 +179,9 @@ function TelaDoDia({
 
   const devidas = dosesDevidas(doses, agora);
   const proxima = proximaDose(doses, agora);
-  const fmtDia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' });
+  const fmtDia = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+  });
   const hoje = fmtDia.format(agora);
   const dosesHoje = doses.filter((d) => fmtDia.format(new Date(d.previsto_em)) === hoje);
   const tomadasHoje = dosesHoje.filter((d) => d.confirmado_em).length;
@@ -156,7 +203,10 @@ function TelaDoDia({
     setErroRostinho(null);
     setGravandoRostinho(true);
     const gravou = await registrarRostinho({
-      funcao: async () => await supabase.functions.invoke('registrar-checkin', { body: { nivel } }),
+      funcao: async () =>
+        await supabase.functions.invoke('registrar-checkin', {
+          body: { nivel },
+        }),
       banco: async () => await supabase.rpc('registrar_rostinho', { p_nivel: nivel }),
     });
     setGravandoRostinho(false);
@@ -167,7 +217,7 @@ function TelaDoDia({
     setCheckinFeito(convite.chave);
     setRostinho(null);
     recarregarCheckin();
-    const resposta = respostaAoRostinho(nivel, apelido);
+    const resposta = respostaAoRostinho(nivel, apelido, comLia);
     if (resposta.conversar) {
       setModo('conversa');
       conversa.iniciarPelaLia(resposta.fala);
@@ -220,7 +270,9 @@ function TelaDoDia({
     </Pressable>
   );
 
-  const alarme = devidas[0] && <Alarme dose={devidas[0]} apelido={apelido} agora={agora} tempos={tempos} onTomei={confirmar} />;
+  const alarme = devidas[0] && (
+    <Alarme dose={devidas[0]} apelido={apelido} agora={agora} tempos={tempos} onTomei={confirmar} />
+  );
 
   if (!iniciado) {
     return (
@@ -235,7 +287,11 @@ function TelaDoDia({
           titulo="Começar"
           onPress={() => {
             setIniciado(true);
-            falar(`${saudacao(agora)}, ${apelido}! Eu sou a ${NOME_ASSISTENTE}. Quando quiser conversar, aperte o botão do microfone.`);
+            falar(
+              comLia
+                ? `${saudacao(agora)}, ${apelido}! Eu sou a ${NOME_ASSISTENTE}. Quando quiser conversar, aperte o botão do microfone.`
+                : `${saudacao(agora)}, ${apelido}! Se precisar, aperte "Preciso de ajuda".`,
+            );
           }}
         />
       </SafeAreaView>
@@ -252,6 +308,28 @@ function TelaDoDia({
           erro={erroRostinho}
           onEscolher={escolherRostinho}
           botaoAjuda={botaoAjuda}
+        />
+        {alarme}
+      </>
+    );
+  }
+
+  if (modo === 'privacidade') {
+    return (
+      <>
+        <TelaConsentimento
+          apelido={apelido}
+          titulo="Minha privacidade"
+          inicial={consentimento}
+          enviando={privacidade.enviando}
+          erro={privacidade.erro}
+          onConfirmar={async (e) => {
+            if (await privacidade.responder(e)) {
+              setModo('inicio');
+              falar('Pronto, guardei as suas escolhas.');
+            }
+          }}
+          onVoltar={() => setModo('inicio')}
         />
         {alarme}
       </>
@@ -301,7 +379,13 @@ function TelaDoDia({
           </View>
           {proxima ? (
             <View style={estilos.proximo}>
-              <Destaque tamanho={tamanhos.horario} style={{ lineHeight: tamanhos.horario, letterSpacing: -0.02 * tamanhos.horario }}>
+              <Destaque
+                tamanho={tamanhos.horario}
+                style={{
+                  lineHeight: tamanhos.horario,
+                  letterSpacing: -0.02 * tamanhos.horario,
+                }}
+              >
                 {horaCurta(proxima.previsto_em)}
               </Destaque>
               <View style={{ flex: 1, gap: 2 }}>
@@ -324,7 +408,12 @@ function TelaDoDia({
                 {dosesHoje.map((d) => (
                   <View
                     key={d.id}
-                    style={[estilos.barra, { backgroundColor: d.confirmado_em ? cores.salvia.forte : cores.salvia.borda }]}
+                    style={[
+                      estilos.barra,
+                      {
+                        backgroundColor: d.confirmado_em ? cores.salvia.forte : cores.salvia.borda,
+                      },
+                    ]}
                   />
                 ))}
               </View>
@@ -349,25 +438,45 @@ function TelaDoDia({
           </View>
         )}
 
-        <View style={estilos.blocoMic}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={rotuloMic}
-            onPress={() => {
-              setModo('conversa');
-              // Sem reconhecimento de fala (ex.: Firefox), a conversa abre com o campo de texto.
-              if (conversa.podeOuvir) conversa.comecar();
-            }}
-            style={({ pressed }) => [estilos.mic, pressed && { opacity: 0.85 }]}
-          >
-            <IconeMicrofone tamanho={60} cor={cores.sobreTinta} traco={1.8} />
-          </Pressable>
-          <Destaque tamanho={28} style={{ marginTop: 14, textAlign: 'center' }}>
-            {rotuloMic}
-          </Destaque>
-        </View>
+        {/* Sem o consentimento "conversar com a Lia", o botão da Lia não aparece. */}
+        {comLia ? (
+          <View style={estilos.blocoMic}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={rotuloMic}
+              onPress={() => {
+                setModo('conversa');
+                // Sem reconhecimento de fala (ex.: Firefox), a conversa abre com o campo de texto.
+                if (conversa.podeOuvir) conversa.comecar();
+              }}
+              style={({ pressed }) => [estilos.mic, pressed && { opacity: 0.85 }]}
+            >
+              <IconeMicrofone tamanho={60} cor={cores.sobreTinta} traco={1.8} />
+            </Pressable>
+            <Destaque tamanho={28} style={{ marginTop: 14, textAlign: 'center' }}>
+              {rotuloMic}
+            </Destaque>
+          </View>
+        ) : (
+          <View style={{ flexGrow: 1 }} />
+        )}
 
         {botaoAjuda}
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setModo('privacidade')}
+          style={({ pressed }) => [estilos.privacidade, pressed && { opacity: 0.7 }]}
+        >
+          <Texto
+            tamanho={20}
+            peso="negrito"
+            cor={cores.textoSuave}
+            style={{ textDecorationLine: 'underline', textAlign: 'center' }}
+          >
+            Minha privacidade
+          </Texto>
+        </Pressable>
       </ScrollView>
       {alarme}
     </SafeAreaView>
@@ -396,15 +505,42 @@ const estilos = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  remedios: { backgroundColor: cores.salvia.fundo, borderRadius: 34, padding: 22, gap: 16 },
+  remedios: {
+    backgroundColor: cores.salvia.fundo,
+    borderRadius: 34,
+    padding: 22,
+    gap: 16,
+  },
   rotulo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  ponto: { width: 10, height: 10, borderRadius: 5, backgroundColor: cores.salvia.forte },
+  ponto: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: cores.salvia.forte,
+  },
   proximo: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  progresso: { backgroundColor: cores.salvia.fundoClaro, borderRadius: 22, paddingVertical: 14, paddingHorizontal: 16, gap: 10 },
+  progresso: {
+    backgroundColor: cores.salvia.fundoClaro,
+    borderRadius: 22,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 10,
+  },
   barras: { flexDirection: 'row', gap: 6 },
   barra: { flex: 1, height: 10, borderRadius: 5 },
-  lia: { backgroundColor: cores.lilas.fundo, borderRadius: 28, padding: 20, gap: 6 },
-  blocoMic: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 22, paddingVertical: 28 },
+  lia: {
+    backgroundColor: cores.lilas.fundo,
+    borderRadius: 28,
+    padding: 20,
+    gap: 6,
+  },
+  blocoMic: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 22,
+    paddingVertical: 28,
+  },
   ajuda: {
     minHeight: 72,
     borderRadius: 36,
@@ -420,6 +556,11 @@ const estilos = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: cores.alerta.forte,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  privacidade: {
+    minHeight: 56,
     alignItems: 'center',
     justifyContent: 'center',
   },

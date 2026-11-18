@@ -11,7 +11,7 @@ insert into auth.users (id, email, is_anonymous) values
  ('33333333-3333-4333-8333-333333333333', null, true);
 insert into public.cuidadores (usuario_id, paciente_id, papel, nome_exibicao) values
  ('11111111-1111-4111-8111-111111111111','00000000-0000-4000-8000-000000000001','principal','Lucas');
-update public.pacientes set usuario_id = '33333333-3333-4333-8333-333333333333'
+update public.pacientes set usuario_id = '33333333-3333-4333-8333-333333333333', consente_registro_em = now(), consente_familia_em = now()
  where id = '00000000-0000-4000-8000-000000000001';
 create temp table convite (codigo text);
 grant all on convite to authenticated;

@@ -9,6 +9,8 @@ interface EstadoAparelho {
   paciente: Paciente | null;
   erro: string | null;
   vincular: (codigo: string) => Promise<string | null>;
+  /** Relê o paciente (por exemplo, depois do consentimento). */
+  recarregar: () => Promise<void>;
 }
 
 const Contexto = createContext<EstadoAparelho>({
@@ -16,6 +18,7 @@ const Contexto = createContext<EstadoAparelho>({
   paciente: null,
   erro: null,
   vincular: async () => null,
+  recarregar: async () => {},
 });
 
 async function buscarPaciente(usuarioId: string): Promise<Paciente | null> {
@@ -67,6 +70,13 @@ export function AparelhoProvider({ children }: { children: ReactNode }) {
     };
   }, [vinculado]);
 
+  const recarregar = useCallback(async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return;
+    const atual = await buscarPaciente(data.session.user.id);
+    if (atual) setPaciente(atual);
+  }, []);
+
   const vincular = useCallback(async (codigo: string): Promise<string | null> => {
     const { data: pacienteId, error } = await supabase.rpc('vincular_aparelho', { p_codigo: codigo });
     if (error) {
@@ -82,7 +92,7 @@ export function AparelhoProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <Contexto.Provider value={{ carregando, paciente, erro, vincular }}>{children}</Contexto.Provider>
+    <Contexto.Provider value={{ carregando, paciente, erro, vincular, recarregar }}>{children}</Contexto.Provider>
   );
 }
 
