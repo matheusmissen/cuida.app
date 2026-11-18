@@ -6,6 +6,7 @@ import {
   dosesParaLembrar,
   notificacaoDoAlerta,
   notificacaoDoCheckin,
+  notificacaoDeReenvio,
   notificacaoDoRemedio,
   type DoseParaLembrar,
 } from './lembretes.ts';
@@ -70,4 +71,15 @@ test('chaves VAPID vêm dos segredos; sem elas, nada é enviado', () => {
   assert.equal(chavesVapid(() => undefined), null);
   const env: Record<string, string> = { VAPID_PUBLIC_KEY: 'pub', VAPID_PRIVATE_KEY: 'priv' };
   assert.deepEqual(chavesVapid((n) => env[n]), { publica: 'pub', privada: 'priv', assunto: 'https://cuida-app-familia.vercel.app' });
+});
+
+test('reenviar lembrete: remédio, check-in ou chamado da família', () => {
+  const dose = { id: 'd9', nomeRemedio: 'Remédio A', dose: '1 comprimido' };
+  assert.equal(notificacaoDeReenvio('dose.nao_confirmada', 'Dona Maria', em('08:40'), dose).titulo, 'Hora do remédio');
+  assert.equal(notificacaoDeReenvio('dose.nao_confirmada', 'Dona Maria', em('08:40'), dose).etiqueta, 'dose-d9');
+  assert.equal(notificacaoDeReenvio('geral.checkin_sem_resposta', 'Dona Maria', em('08:20')).titulo, 'Bom dia, Dona Maria!');
+  const outro = notificacaoDeReenvio('leucemia.febre', 'Dona Maria', em('10:00'));
+  assert.match(outro.titulo, /sua família quer saber de você/);
+  assert.equal(outro.urgente, true);
+  assert.match(notificacaoDeReenvio('dose.nao_confirmada', 'Dona Maria', em('10:00'), null).titulo, /família/, 'sem a dose, chamado genérico');
 });

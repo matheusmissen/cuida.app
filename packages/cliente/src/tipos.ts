@@ -20,11 +20,13 @@ export interface Paciente {
   tolerancia_dose_min: number;
   tolerancia_checkin_min: number;
   escalada_min: number;
+  /** Telefone do idoso (só dígitos), para "Ligar para o idoso". */
+  telefone: string | null;
 }
 
 /** Colunas de `pacientes` que os apps leem. */
 export const SELECT_PACIENTE =
-  'id, usuario_id, nome, apelido, condicoes, outras_condicoes, limite_febre, ultima_interacao_em, horario_checkin, tolerancia_dose_min, tolerancia_checkin_min, escalada_min';
+  'id, usuario_id, nome, apelido, condicoes, outras_condicoes, limite_febre, ultima_interacao_em, horario_checkin, tolerancia_dose_min, tolerancia_checkin_min, escalada_min, telefone';
 
 export interface Remedio {
   id: string;
@@ -65,7 +67,18 @@ export interface AlertaLinha {
   motivo: string;
   criado_em: string;
   visto_em: string | null;
+  /** Quem já foi avisado (usuario_id dos cuidadores). */
+  avisados: string[];
+  /** Última ação do responsável ("Reenviar lembrete"). */
+  acao_em: string | null;
+  /** Como foi resolvido: 'familia', 'tomou' ou 'checkin'. */
+  resolucao: 'familia' | 'tomou' | 'checkin' | null;
+  /** Dose que gerou o alerta (alertas de dose). */
+  dose_id: string | null;
 }
+
+/** Colunas de `alertas` que o app da família lê. */
+export const SELECT_ALERTA = 'id, paciente_id, gatilho, nivel, motivo, criado_em, visto_em, avisados, acao_em, resolucao, dose_id';
 
 /** Select do PostgREST que traz o remédio junto com a dose. */
 export const SELECT_DOSE =

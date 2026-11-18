@@ -64,3 +64,28 @@ export const IconeConversa = (p: IconeProps) => (
     <Path d="M4 5h16v11H9l-5 4V5z" />
   </Base>
 );
+
+export const IconeTelefone = (p: IconeProps) => (
+  <Base {...p}>
+    <Path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" />
+  </Base>
+);
+
+export const IconeSino = (p: IconeProps) => (
+  <Base {...p}>
+    <Path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+    <Path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" />
+  </Base>
+);
+
+export const IconeConfirmado = (p: IconeProps) => (
+  <Base {...p}>
+    <Path d="M5 12.5l4.5 4.5L19 7.5" />
+  </Base>
+);
+
+export const IconeVoltar = (p: IconeProps) => (
+  <Base {...p}>
+    <Path d="M15 5l-7 7 7 7" />
+  </Base>
+);

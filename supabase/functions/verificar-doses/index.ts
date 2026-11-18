@@ -3,7 +3,8 @@
 // padrão do PRD 30/15/15, e 1/1/1 no modo demonstração (packages/regras, temposDoPaciente).
 // 1. Gera as doses de hoje e de amanhã (idempotente).
 // 2. Doses sem "Tomei" até a tolerância → alerta laranja ao responsável (motor de regras, avaliarDose).
-// 3. Alertas laranja que ninguém marcou como vistos: depois de `escalada_min`, avisa todo o grupo.
+// 3. Alertas laranja não resolvidos: `escalada_min` depois da criação (ou do último "Reenviar lembrete"), avisa todo o grupo.
+//    Confirmar a dose ou fazer o check-in resolve o alerta sozinho (gatilhos no banco), e aí não escala.
 // 4. Nenhuma interação do aparelho do idoso em 24 h: alerta vermelho (uma vez por silêncio).
 // 5. Check-in diário sem resposta até a tolerância: alerta laranja (uma vez por dia).
 // 6. Lembretes para o idoso por web push: remédio no horário (uma vez por dose) e check-in (uma vez por dia).
@@ -120,7 +121,7 @@ Deno.serve(async (req) => {
       .select('id');
     if (!marcada || marcada.length === 0) continue;
     try {
-      await criarEAvisar(supabase, perdida.pacienteId, perdida.alerta, perdida.regraId);
+      await criarEAvisar(supabase, perdida.pacienteId, perdida.alerta, perdida.regraId, { dose_id: perdida.doseId });
       alertasCriados += 1;
     } catch (e) {
       // Sem o alerta, a dose volta para pendente e a próxima execução tenta de novo.
@@ -133,7 +134,7 @@ Deno.serve(async (req) => {
   let escalados = 0;
   const { data: abertos } = await supabase
     .from('alertas')
-    .select('id, paciente_id, gatilho, nivel, motivo, criado_em, avisados, visto_em')
+    .select('id, paciente_id, gatilho, nivel, motivo, criado_em, avisados, visto_em, acao_em')
     .eq('nivel', 'laranja')
     .is('visto_em', null)
     .gte('criado_em', new Date(agora.getTime() - 24 * HORA).toISOString());
@@ -141,7 +142,7 @@ Deno.serve(async (req) => {
   for (const a of abertos ?? []) {
     const cuidadores = await carregarCuidadores(supabase, a.paciente_id);
     const proximos = proximosDaEscala(
-      { nivel: a.nivel, criadoEm: a.criado_em, avisados: a.avisados, vistoEm: a.visto_em },
+      { nivel: a.nivel, criadoEm: a.criado_em, avisados: a.avisados, vistoEm: a.visto_em, acaoEm: a.acao_em },
       cuidadores,
       agora,
       (temposEscala.get(a.paciente_id) ?? TEMPOS_PADRAO).escaladaMin,
