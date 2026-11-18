@@ -60,7 +60,7 @@ function Rotas() {
         <Stack.Screen name="documentos/index" options={{ headerShown: false, title: 'Documentos', animation: 'none' }} />
         <Stack.Screen name="documentos/adicionar" options={{ headerShown: false, title: 'Adicionar documento' }} />
         <Stack.Screen name="documentos/receita" options={{ headerShown: false, title: 'Confira a receita' }} />
-        <Stack.Screen name="vincular" options={{ title: 'Vincular o celular' }} />
+        <Stack.Screen name="vincular" options={{ headerShown: false, title: 'Conectar o celular' }} />
         <Stack.Screen name="grupo" options={{ headerShown: false, title: 'Grupo de cuidado' }} />
       </Stack.Protected>
       <Stack.Screen name="convite" options={{ headerShown: false, title: 'Convite' }} />

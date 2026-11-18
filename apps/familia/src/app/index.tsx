@@ -248,8 +248,8 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
 
             {!paciente?.usuario_id && (
               <Cartao>
-                <Texto>O celular de {nome} ainda não foi vinculado.</Texto>
-                <Botao variante="secundario" titulo="Vincular o celular" onPress={() => router.push('/vincular')} />
+                <Texto>O celular de {nome} ainda não está conectado.</Texto>
+                <Botao variante="secundario" titulo="Conectar o celular" onPress={() => router.push('/vincular')} />
               </Cartao>
             )}
 

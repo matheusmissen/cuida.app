@@ -89,3 +89,29 @@ export const IconeVoltar = (p: IconeProps) => (
     <Path d="M15 5l-7 7 7 7" />
   </Base>
 );
+
+/** Botão Compartilhar do Safari (quadrado com seta para cima). */
+export const IconeCompartilhar = (p: IconeProps) => (
+  <Base {...p}>
+    <Path d="M12 3v12" />
+    <Path d="M8 7l4-4 4 4" />
+    <Path d="M6 11H5v10h14V11h-1" />
+  </Base>
+);
+
+/** Menu do Chrome (três pontinhos em pé). */
+export const IconeMenu = (p: IconeProps) => (
+  <Base {...p}>
+    <Circle cx="12" cy="5" r="1.4" />
+    <Circle cx="12" cy="12" r="1.4" />
+    <Circle cx="12" cy="19" r="1.4" />
+  </Base>
+);
+
+/** Adicionar (quadrado com +), como em "Adicionar à Tela de Início". */
+export const IconeAdicionar = (p: IconeProps) => (
+  <Base {...p}>
+    <Rect x="4" y="4" width="16" height="16" rx="4" />
+    <Path d="M12 8v8M8 12h8" />
+  </Base>
+);

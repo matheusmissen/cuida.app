@@ -51,7 +51,7 @@ export default function Ajustes() {
                 ? 'Celular vinculado. Um código novo troca para outro aparelho.'
                 : 'Ainda não vinculado. Gere o código e mostre no celular.'}
             </Texto>
-            <Botao variante="secundario" titulo="Vincular o celular" onPress={() => router.push('/vincular')} />
+            <Botao variante="secundario" titulo="Conectar o celular" onPress={() => router.push('/vincular')} />
           </Cartao>
         )}
         <View style={{ height: 4 }} />
