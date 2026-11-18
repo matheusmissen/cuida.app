@@ -21,7 +21,7 @@ import { supabase } from '@/lib/supabase';
 import { espacos, paleta } from '@/lib/tema';
 
 export default function Ajustes() {
-  const { paciente } = usePaciente();
+  const { paciente, papel } = usePaciente();
   const nome = paciente ? paciente.apelido || paciente.nome : '';
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: paleta.fundo }}>
@@ -29,6 +29,17 @@ export default function Ajustes() {
         <TituloPagina style={{ paddingHorizontal: 4 }}>Ajustes</TituloPagina>
         {paciente && <HorarioCheckin />}
         <CartaoNotificacoes />
+        {paciente && (
+          <Cartao>
+            <Titulo>Grupo de cuidado</Titulo>
+            <Texto suave>
+              {papel === 'principal'
+                ? 'Veja quem acompanha, convide outros familiares e passe a responsabilidade.'
+                : 'Veja quem acompanha e o seu papel no grupo.'}
+            </Texto>
+            <Botao variante="secundario" titulo="Abrir grupo de cuidado" onPress={() => router.push('/grupo')} />
+          </Cartao>
+        )}
         {paciente && <TelefoneDoPaciente />}
         {paciente && <TemposDosAvisos />}
         {paciente && <CondicoesDoPaciente />}

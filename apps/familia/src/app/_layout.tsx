@@ -3,7 +3,7 @@ import { AtkinsonHyperlegible_700Bold } from '@expo-google-fonts/atkinson-hyperl
 import { Outfit_500Medium } from '@expo-google-fonts/outfit/500Medium';
 import { fontesVariacaoE } from '@cuida/visual';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { registrarServiceWorker } from '@cuida/cliente';
@@ -12,6 +12,7 @@ import { ActivityIndicator, Platform, View } from 'react-native';
 import { cores } from '@/components/ui';
 import { fontes } from '@/lib/tema';
 import { PacienteProvider } from '@/lib/paciente';
+import { lerConvitePendente } from '@/lib/grupo';
 import { registrarPush } from '@/lib/push';
 import { SessaoProvider, useSessao } from '@/lib/sessao';
 
@@ -20,6 +21,14 @@ function Rotas() {
 
   useEffect(() => {
     if (sessao) registrarPush(sessao.user.id).catch((e) => console.warn('Push:', e?.message ?? e));
+  }, [sessao]);
+
+  // Abriu um link de convite antes de entrar na conta: depois do login, volta para o convite.
+  useEffect(() => {
+    if (!sessao) return;
+    lerConvitePendente().then((codigo) => {
+      if (codigo) router.push({ pathname: '/convite', params: { codigo } });
+    });
   }, [sessao]);
 
   if (carregando) {
@@ -52,7 +61,9 @@ function Rotas() {
         <Stack.Screen name="documentos/adicionar" options={{ headerShown: false, title: 'Adicionar documento' }} />
         <Stack.Screen name="documentos/receita" options={{ headerShown: false, title: 'Confira a receita' }} />
         <Stack.Screen name="vincular" options={{ title: 'Vincular o celular' }} />
+        <Stack.Screen name="grupo" options={{ headerShown: false, title: 'Grupo de cuidado' }} />
       </Stack.Protected>
+      <Stack.Screen name="convite" options={{ headerShown: false, title: 'Convite' }} />
     </Stack>
   );
 }
