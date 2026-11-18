@@ -11,9 +11,10 @@
     "test": "npm run test:pacotes && npm run test:funcoes",
     "test:pacotes": "npm run test --workspace=@cuida/regras --workspace=@cuida/cliente --workspace=@cuida/visual",
     "test:funcoes": "node --experimental-strip-types --test supabase/functions/_shared/*.test.ts supabase/functions/agente/*.test.ts",
-    "typecheck": "npm run typecheck --workspace=@cuida/idoso --workspace=@cuida/familia",
+    "typecheck": "npm run typecheck --workspace=@cuida/idoso --workspace=@cuida/familia && npm run typecheck:funcoes",
     "idoso": "npm run web --workspace=@cuida/idoso",
-    "familia": "npm run web --workspace=@cuida/familia"
+    "familia": "npm run web --workspace=@cuida/familia",
+    "typecheck:funcoes": "tsc -p supabase/functions/tsconfig.checagem.json"
   },
   "engines": {
     "node": ">=22.6"

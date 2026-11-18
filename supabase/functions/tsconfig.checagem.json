@@ -1,0 +1,22 @@
+{
+  "//": "Checagem de tipos das Edge Functions em Node (sem Deno): npm run typecheck:funcoes",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "lib": ["ES2022", "DOM"],
+    "types": [],
+    "paths": { "npm:@supabase/supabase-js@2": ["../../node_modules/@supabase/supabase-js"] }
+  },
+  "files": [
+    "_tipos/deno.d.ts",
+    "verificar-doses/index.ts",
+    "pedir-ajuda/index.ts",
+    "agente/index.ts",
+    "ler-receita/index.ts"
+  ]
+}

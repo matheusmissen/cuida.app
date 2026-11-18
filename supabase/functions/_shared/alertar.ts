@@ -4,6 +4,8 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import type { Alerta } from '../../../packages/regras/src/index.ts';
 import { destinatariosIniciais, type Cuidador } from './escala.ts';
+import { notificacaoDoAlerta } from './lembretes.ts';
+import { notificarUsuarios } from './notificar.ts';
 import { enviarPush, mensagensPush } from './push.ts';
 
 export async function carregarCuidadores(supabase: SupabaseClient, pacienteId: string): Promise<Cuidador[]> {
@@ -23,6 +25,24 @@ export async function carregarCuidadores(supabase: SupabaseClient, pacienteId: s
 export async function nomeDoPaciente(supabase: SupabaseClient, pacienteId: string): Promise<string> {
   const { data } = await supabase.from('pacientes').select('nome, apelido').eq('id', pacienteId).single();
   return data?.apelido || data?.nome || 'Paciente';
+}
+
+/**
+ * Avisa as pessoas do grupo: web push nos navegadores inscritos (app da família) e push do Expo
+ * (aparelhos nativos com token). Falha de envio nunca desfaz o alerta, que já está no painel.
+ */
+export async function avisarFamilia(
+  supabase: SupabaseClient,
+  alerta: Alerta,
+  alertaId: string,
+  nomePaciente: string,
+  destinatarios: Cuidador[],
+): Promise<void> {
+  if (destinatarios.length === 0) return;
+  await Promise.all([
+    notificarUsuarios(supabase, destinatarios.map((c) => c.usuarioId), 'familia', notificacaoDoAlerta(alerta, alertaId, nomePaciente)),
+    enviarPush(mensagensPush(alerta, alertaId, nomePaciente, destinatarios)),
+  ]);
 }
 
 export async function criarEAvisar(
@@ -48,7 +68,7 @@ export async function criarEAvisar(
   if (error) throw error;
   if (destinatarios.length > 0) {
     const nome = await nomeDoPaciente(supabase, pacienteId);
-    await enviarPush(mensagensPush(alerta, data.id, nome, destinatarios));
+    await avisarFamilia(supabase, alerta, data.id, nome, destinatarios);
   }
   return data.id;
 }

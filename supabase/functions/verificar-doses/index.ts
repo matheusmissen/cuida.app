@@ -6,6 +6,7 @@
 // 3. Alertas laranja que ninguém marcou como vistos: depois de `escalada_min`, avisa todo o grupo.
 // 4. Nenhuma interação do aparelho do idoso em 24 h: alerta vermelho (uma vez por silêncio).
 // 5. Check-in diário sem resposta até a tolerância: alerta laranja (uma vez por dia).
+// 6. Lembretes para o idoso por web push: remédio no horário (uma vez por dose) e check-in (uma vez por dia).
 // Só aceita chave de servidor (o cron): service_role antiga ou chave secreta nova (_shared/autorizacao.ts).
 // Os apps nunca chamam esta função.
 
@@ -14,8 +15,15 @@ import { TEMPOS_PADRAO, temposDoPaciente, type Tempos } from '../../../packages/
 import { aplicarRegraDoPaciente, planejarDoses, type DoseLinha, type RegraPaciente } from '../_shared/doses.ts';
 import { checkinsSemResposta } from '../_shared/checkin.ts';
 import { proximosDaEscala } from '../_shared/escala.ts';
-import { carregarCuidadores, criarEAvisar, nomeDoPaciente } from '../_shared/alertar.ts';
-import { enviarPush, mensagensPush } from '../_shared/push.ts';
+import { avisarFamilia, carregarCuidadores, criarEAvisar, nomeDoPaciente } from '../_shared/alertar.ts';
+import {
+  deveLembrarCheckin,
+  dosesParaLembrar,
+  notificacaoDoCheckin,
+  notificacaoDoRemedio,
+  type DoseParaLembrar,
+} from '../_shared/lembretes.ts';
+import { notificarUsuarios } from '../_shared/notificar.ts';
 import { pacientesEmSilencio } from '../_shared/silencio.ts';
 import { autorizadoComoServidor, chavesDeServidor, credenciaisRecebidas, tipoDaChave } from '../_shared/autorizacao.ts';
 
@@ -144,9 +152,7 @@ Deno.serve(async (req) => {
       .update({ avisados: [...a.avisados, ...proximos.map((c) => c.usuarioId)] })
       .eq('id', a.id);
     const nome = await nomeDoPaciente(supabase, a.paciente_id);
-    await enviarPush(
-      mensagensPush({ nivel: a.nivel, gatilho: a.gatilho, motivo: a.motivo }, a.id, nome, proximos),
-    );
+    await avisarFamilia(supabase, { nivel: a.nivel, gatilho: a.gatilho, motivo: a.motivo }, a.id, nome, proximos);
     escalados += proximos.length;
   }
 
@@ -246,10 +252,95 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Lembretes para o idoso por web push (só chegam se o aparelho ativou as notificações).
+  // Remédio: no horário, uma vez por dose, até a tolerância (lembretes.ts, dosesParaLembrar).
+  let lembretesRemedio = 0;
+  const { data: chegando } = await supabase
+    .from('doses')
+    .select('id, paciente_id, previsto_em, confirmado_em, lembrete_em, horarios!inner(remedios!inner(nome, dose))')
+    .eq('status', 'pendente')
+    .is('confirmado_em', null)
+    .is('lembrete_em', null)
+    .lte('previsto_em', agora.toISOString())
+    .gte('previsto_em', new Date(agora.getTime() - 4 * HORA).toISOString());
+  // deno-lint-ignore no-explicit-any
+  const linhasLembrete = (chegando ?? []) as any[];
+  if (linhasLembrete.length > 0) {
+    const ids = [...new Set(linhasLembrete.map((l) => l.paciente_id as string))];
+    const { data: pacs } = await supabase
+      .from('pacientes')
+      .select('id, usuario_id, tolerancia_dose_min, tolerancia_checkin_min, escalada_min')
+      .in('id', ids);
+    const tempos = new Map<string, Tempos>();
+    const aparelho = new Map<string, string>();
+    for (const p of pacs ?? []) {
+      tempos.set(p.id, temposDoPaciente(p));
+      if (p.usuario_id) aparelho.set(p.id, p.usuario_id);
+    }
+    const devidas: DoseParaLembrar[] = linhasLembrete.map((l) => ({
+      id: l.id,
+      pacienteId: l.paciente_id,
+      previstoEm: l.previsto_em,
+      confirmadoEm: l.confirmado_em,
+      lembreteEm: l.lembrete_em,
+    }));
+    const lembrar = new Set(dosesParaLembrar(devidas, tempos, agora));
+    for (const l of linhasLembrete) {
+      const usuario = aparelho.get(l.paciente_id);
+      if (!lembrar.has(l.id) || !usuario) continue;
+      // Marca antes de mandar; se outra execução já marcou, não manda de novo.
+      const { data: marcada } = await supabase
+        .from('doses')
+        .update({ lembrete_em: agora.toISOString() })
+        .eq('id', l.id)
+        .is('lembrete_em', null)
+        .select('id');
+      if (!marcada || marcada.length === 0) continue;
+      lembretesRemedio += await notificarUsuarios(
+        supabase,
+        [usuario],
+        'idoso',
+        notificacaoDoRemedio(l.id, l.horarios.remedios.nome, l.horarios.remedios.dose),
+      );
+    }
+  }
+
+  // Check-in: no horário, uma vez por dia, se ainda não houve check-in hoje.
+  let lembretesCheckin = 0;
+  const { data: comHorario } = await supabase
+    .from('pacientes')
+    .select('id, usuario_id, nome, apelido, horario_checkin, lembrete_checkin_em, tolerancia_dose_min, tolerancia_checkin_min, escalada_min')
+    .not('usuario_id', 'is', null)
+    .not('horario_checkin', 'is', null);
+  // deno-lint-ignore no-explicit-any
+  const candidatos = ((comHorario ?? []) as any[]).filter((p) =>
+    deveLembrarCheckin(p.horario_checkin, agora, null, p.lembrete_checkin_em, temposDoPaciente(p)),
+  );
+  if (candidatos.length > 0) {
+    const { data: feitos } = await supabase
+      .from('checkins')
+      .select('paciente_id, feito_em')
+      .in('paciente_id', candidatos.map((p) => p.id))
+      .gte('feito_em', new Date(agora.getTime() - 48 * HORA).toISOString());
+    const ultimo = new Map<string, string>();
+    for (const c of (feitos ?? []) as { paciente_id: string; feito_em: string }[]) {
+      const atual = ultimo.get(c.paciente_id);
+      if (!atual || Date.parse(c.feito_em) > Date.parse(atual)) ultimo.set(c.paciente_id, c.feito_em);
+    }
+    for (const p of candidatos) {
+      if (!deveLembrarCheckin(p.horario_checkin, agora, ultimo.get(p.id) ?? null, p.lembrete_checkin_em, temposDoPaciente(p))) continue;
+      await supabase.from('pacientes').update({ lembrete_checkin_em: agora.toISOString() }).eq('id', p.id);
+      const apelido = p.apelido || String(p.nome).split(' ')[0];
+      lembretesCheckin += await notificarUsuarios(supabase, [p.usuario_id], 'idoso', notificacaoDoCheckin(apelido, agora));
+    }
+  }
+
   return Response.json({
     alertas: alertasCriados,
     escalados,
     silencios,
     checkins_sem_resposta: checkinsSemResp,
+    lembretes_remedio: lembretesRemedio,
+    lembretes_checkin: lembretesCheckin,
   });
 });

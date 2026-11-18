@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { HorarioCheckin } from '@/components/checkin-diario';
+import { CartaoNotificacoes } from '@/components/notificacoes';
 import { CondicoesSaude, formDoPaciente, type FormCondicoes } from '@/components/condicoes-saude';
 import { BarraNavegacao, ESPACO_BARRA } from '@/components/navegacao';
 import { Botao, Cartao, Erro, Texto, Titulo, TituloPagina } from '@/components/ui';
@@ -27,6 +28,7 @@ export default function Ajustes() {
       <ScrollView contentContainerStyle={estilos.conteudo}>
         <TituloPagina style={{ paddingHorizontal: 4 }}>Ajustes</TituloPagina>
         {paciente && <HorarioCheckin />}
+        <CartaoNotificacoes />
         {paciente && <TemposDosAvisos />}
         {paciente && <CondicoesDoPaciente />}
         {paciente && (
