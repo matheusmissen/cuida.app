@@ -1,4 +1,4 @@
-// O aparelho do idoso entra anonimamente e se vincula ao paciente pelo código/QR da família.
+// O aparelho do idoso entra anonimamente e se vincula ao paciente pelo código de 4 números da família.
 import { SELECT_PACIENTE, type Paciente } from '@cuida/cliente';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
@@ -68,12 +68,14 @@ export function AparelhoProvider({ children }: { children: ReactNode }) {
   }, [vinculado]);
 
   const vincular = useCallback(async (codigo: string): Promise<string | null> => {
-    const { error } = await supabase.rpc('vincular_aparelho', { p_codigo: codigo });
+    const { data: pacienteId, error } = await supabase.rpc('vincular_aparelho', { p_codigo: codigo });
     if (error) {
-      return error.message.includes('inválido')
-        ? 'Esse código não funcionou. Peça um código novo para a sua família.'
+      return /tentativas/i.test(error.message)
+        ? 'Muitas tentativas. Espere 15 minutos e peça um código novo para a sua família.'
         : 'Não consegui conectar. Verifique a internet e tente de novo.';
     }
+    // Código errado, vencido ou já usado: a função devolve null.
+    if (!pacienteId) return 'Esse código não funcionou. Peça um código novo para a sua família.';
     const { data } = await supabase.auth.getUser();
     if (data.user) setPaciente(await buscarPaciente(data.user.id));
     return null;

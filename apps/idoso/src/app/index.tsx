@@ -13,6 +13,7 @@ import {
   saudacao,
   type ResultadoAjuda,
 } from '@cuida/cliente';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,8 +24,12 @@ import { TelaConversa } from '@/components/conversa';
 import { TelaFamiliaAvisada } from '@/components/familia-avisada';
 import { IconeMicrofone, IconeTelefone } from '@/components/icones';
 import { BotaoPrincipal, Destaque, Texto } from '@/components/ui';
-import { VincularAparelho } from '@/components/vincular-aparelho';
+import { TelaInstalar } from '@/components/instalar';
+import { PedirAvisos } from '@/components/pedir-avisos';
+import { PrimeiroAcesso } from '@/components/primeiro-acesso';
 import { useAparelho } from '@/lib/aparelho';
+import { useInstalacao } from '@/lib/instalacao';
+import { useNotificacoes } from '@/lib/notificacoes';
 import { supabase } from '@/lib/supabase';
 import { alvos, cores, espacos, sombras, tamanhos } from '@/lib/tema';
 import { useCheckin } from '@/lib/use-checkin';
@@ -35,10 +40,25 @@ import { falar, NOME_ASSISTENTE, useUltimaFala } from '@/lib/voz';
 /** Por quanto tempo a última fala da Lia fica no início (depois do "Tomei", por exemplo). */
 const FALA_RECENTE_MS = 90_000;
 
+const CHAVE_AVISOS_PERGUNTADOS = 'cuida.avisos_perguntados';
+
 export default function Inicio() {
   const { carregando, paciente, erro } = useAparelho();
+  const instalacao = useInstalacao();
+  const notificacoes = useNotificacoes();
+  // Os avisos são pedidos uma vez, logo depois do código (docs/PRD.md, tela 2 do idoso).
+  const [avisosPerguntados, setAvisosPerguntados] = useState<boolean | null>(null);
+  useEffect(() => {
+    AsyncStorage.getItem(CHAVE_AVISOS_PERGUNTADOS)
+      .then((v) => setAvisosPerguntados(v === 'sim'))
+      .catch(() => setAvisosPerguntados(true));
+  }, []);
+  const marcarAvisosPerguntados = () => {
+    setAvisosPerguntados(true);
+    AsyncStorage.setItem(CHAVE_AVISOS_PERGUNTADOS, 'sim').catch(() => {});
+  };
 
-  if (carregando) {
+  if (carregando || instalacao.carregando) {
     return (
       <SafeAreaView style={estilos.centro}>
         <ActivityIndicator size="large" color={cores.tinta} />
@@ -53,10 +73,20 @@ export default function Inicio() {
     );
   }
   if (!paciente) {
+    // Tela 1 (instalar, só no celular ainda não instalado) e tela 2 (código de 4 números).
+    if (instalacao.mostrarTela) return <TelaInstalar instalacao={instalacao} />;
+    return <PrimeiroAcesso />;
+  }
+  if (avisosPerguntados === false && notificacoes.estado === 'pedir') {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: cores.fundo }}>
-        <VincularAparelho />
-      </SafeAreaView>
+      <PedirAvisos
+        ativando={notificacoes.ativando}
+        onAtivar={async () => {
+          await notificacoes.ativar();
+          marcarAvisosPerguntados();
+        }}
+        onDepois={marcarAvisosPerguntados}
+      />
     );
   }
   return (

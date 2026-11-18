@@ -1,4 +1,4 @@
-// Link do QR code (cuida-idoso://vincular?codigo=123456): vincula e volta para a tela única.
+// Link de vínculo (/vincular?codigo=1234): vincula e volta para a tela única.
 import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -12,7 +12,7 @@ export default function VincularPorLink() {
 
   useEffect(() => {
     if (carregando) return;
-    if (paciente || !codigo || !/^\d{6}$/.test(codigo)) {
+    if (paciente || !codigo || !/^\d{4}$/.test(codigo)) {
       setPronto(true);
       return;
     }

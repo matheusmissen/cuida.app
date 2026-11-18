@@ -10,9 +10,12 @@ import { registrarServiceWorker } from '@cuida/cliente';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { AparelhoProvider } from '@/lib/aparelho';
+import { ouvirInstalacao } from '@/lib/instalacao';
 import { cores } from '@/lib/tema';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+// O Chrome avisa cedo que dá para instalar (botão "Instalar o Cuida"): começa a ouvir já.
+ouvirInstalacao();
 
 // Uma tela só, sem menus e sem gestos de deslizar: tudo é configurado pelo app da família.
 export default function Layout() {

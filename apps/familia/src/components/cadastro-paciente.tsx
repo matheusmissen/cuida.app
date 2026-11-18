@@ -1,4 +1,4 @@
-import { condicoesParaSalvar } from '@cuida/cliente';
+import { condicoesParaSalvar, lerTelefone } from '@cuida/cliente';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -17,6 +17,7 @@ export function CadastroPaciente() {
   const [apelido, setApelido] = useState('');
   const [seuNome, setSeuNome] = useState('');
   const [condicoes, setCondicoes] = useState<FormCondicoes>(formDoPaciente(null));
+  const [telefone, setTelefone] = useState('');
   const [consentiu, setConsentiu] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -25,6 +26,8 @@ export function CadastroPaciente() {
     setErro(null);
     if (nome.trim().length < 2) return setErro('Informe o nome de quem vai ser cuidado.');
     if (!consentiu) return setErro('É preciso confirmar o consentimento para continuar.');
+    const tel = telefone.trim() ? lerTelefone(telefone) : null;
+    if (telefone.trim() && !tel) return setErro('Telefone inválido. Use o DDD, por exemplo: (11) 98765-4321');
     const saude = condicoesParaSalvar(condicoes);
     setEnviando(true);
     const { data: id, error } = await supabase.rpc('criar_paciente', {
@@ -35,11 +38,12 @@ export function CadastroPaciente() {
       p_outras_condicoes: saude.outras_condicoes,
     });
     if (!error && id) {
-      await supabase.from('pacientes').update({ consentimento_em: new Date().toISOString() }).eq('id', id);
+      await supabase.from('pacientes').update({ consentimento_em: new Date().toISOString(), telefone: tel }).eq('id', id);
     }
     setEnviando(false);
     if (error) return setErro(error.message);
     await recarregar();
+    router.push('/vincular'); // próximo passo: mandar o link e passar o código de 4 números
   }
 
   return (
@@ -58,6 +62,13 @@ export function CadastroPaciente() {
         value={apelido}
         onChangeText={setApelido}
         placeholder="Dona Maria"
+      />
+      <Campo
+        rotulo="Telefone dela ou dele, com DDD (opcional)"
+        value={telefone}
+        onChangeText={setTelefone}
+        placeholder="(11) 98765-4321"
+        keyboardType="phone-pad"
       />
       <Campo rotulo="Seu nome (como aparece para o círculo)" value={seuNome} onChangeText={setSeuNome} placeholder="Lucas (neto)" />
       <CondicoesSaude valor={condicoes} aoMudar={setCondicoes} />
