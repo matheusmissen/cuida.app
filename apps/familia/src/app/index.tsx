@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CartaoUrgente, TelaAlerta, useAvisoUrgente } from '@/components/alerta-urgente';
 import { CadastroPaciente } from '@/components/cadastro-paciente';
 import { CartaoUltimoCheckin } from '@/components/checkin-diario';
+import { CartaoNotificacoes } from '@/components/notificacoes';
 import { BarraNavegacao, ESPACO_BARRA } from '@/components/navegacao';
 import { Avatar, Botao, Cartao, cores, Divisor, Erro, Selo, Texto, Titulo, TituloPagina } from '@/components/ui';
 import { usePaciente } from '@/lib/paciente';
@@ -203,6 +204,8 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
         {urgentes.map((a) => (
           <CartaoUrgente key={a.id} alerta={a} onAbrir={() => setAlertaAberto(a.id)} />
         ))}
+
+        <CartaoNotificacoes soQuandoFaltar />
 
         {emAlertas ? (
           <Cartao style={{ paddingBottom: 8, gap: 0 }}>

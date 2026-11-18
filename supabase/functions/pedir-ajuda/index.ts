@@ -4,14 +4,13 @@
 // Saída:   { alerta_id, novo }
 //
 // O alerta é gravado pela função do banco `pedir_ajuda()` (com o token do aparelho), a mesma que o app
-// chama direto se esta função falhar. Aqui só se acrescenta o push para todo o círculo de cuidado.
+// chama direto se esta função falhar. Aqui só se acrescenta o aviso (web push e push do Expo) para todo o grupo.
 // Não usa IA: o pedido de ajuda funciona mesmo com o LLM fora do ar.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { pedidoDeAjuda } from '../../../packages/regras/src/index.ts';
-import { carregarCuidadores, nomeDoPaciente } from '../_shared/alertar.ts';
+import { avisarFamilia, carregarCuidadores, nomeDoPaciente } from '../_shared/alertar.ts';
 import { destinatariosIniciais } from '../_shared/escala.ts';
-import { enviarPush, mensagensPush } from '../_shared/push.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -54,7 +53,7 @@ Deno.serve(async (req) => {
         const cuidadores = await carregarCuidadores(db, paciente.paciente_id);
         const destinatarios = destinatariosIniciais(alerta.nivel, cuidadores);
         const nome = await nomeDoPaciente(db, paciente.paciente_id);
-        await enviarPush(mensagensPush(alerta, resultado.alerta_id, nome, destinatarios));
+        await avisarFamilia(db, alerta, resultado.alerta_id, nome, destinatarios);
       }
     } catch (erro) {
       // O alerta já está gravado e aparece no painel em tempo real; falha de push não desfaz isso.

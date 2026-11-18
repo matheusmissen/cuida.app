@@ -18,6 +18,7 @@ import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { temposDoPaciente, type Tempos } from '@cuida/regras';
 import { Alarme } from '@/components/alarme';
+import { AvisosNotificacao } from '@/components/avisos-notificacao';
 import { TelaConversa } from '@/components/conversa';
 import { TelaFamiliaAvisada } from '@/components/familia-avisada';
 import { IconeMicrofone, IconeTelefone } from '@/components/icones';
@@ -184,6 +185,8 @@ function TelaDoDia({
             {`${saudacao(agora)},\n${apelido}`}
           </Destaque>
         </View>
+
+        <AvisosNotificacao />
 
         <View style={estilos.remedios}>
           <View style={estilos.rotulo}>

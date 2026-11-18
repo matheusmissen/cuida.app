@@ -6,9 +6,9 @@
 // - Páginas: tenta a rede primeiro; sem internet, mostra a casca guardada.
 // - Arquivos do build (/_expo/static/ e /assets/, com nome que muda a cada versão): guarda na primeira vez.
 // - Nunca guarda chamadas a outros sites (Supabase, API da Lia): dados de saúde não ficam no cache.
-// As notificações (web push) entram na próxima etapa, neste mesmo arquivo.
+// - Mostra as notificações (web push) mandadas pelo servidor e abre o app ao tocar nelas.
 
-const VERSAO = 'cuida-v1';
+const VERSAO = 'cuida-v2';
 const CASCA = ['/', '/manifest.webmanifest', '/icones/icone-192.png', '/icones/icone-512.png'];
 
 self.addEventListener('install', (evento) => {
@@ -67,4 +67,46 @@ self.addEventListener('fetch', (evento) => {
       ),
     );
   }
+});
+
+// Notificações (web push). O servidor manda { titulo, corpo, url, etiqueta, urgente }
+// (supabase/functions/_shared/webpush.ts, Notificacao), cifrado só para este navegador.
+self.addEventListener('push', (evento) => {
+  let dados = {};
+  try {
+    dados = evento.data ? evento.data.json() : {};
+  } catch {
+    dados = { corpo: evento.data ? evento.data.text() : '' };
+  }
+  const titulo = dados.titulo || 'Cuida';
+  evento.waitUntil(
+    self.registration.showNotification(titulo, {
+      body: dados.corpo || '',
+      icon: '/icones/icone-192.png',
+      badge: '/icones/icone-192.png',
+      tag: dados.etiqueta || undefined,
+      renotify: Boolean(dados.etiqueta),
+      // Alerta crítico ou emergência: fica na tela até a pessoa tocar.
+      requireInteraction: Boolean(dados.urgente),
+      lang: 'pt-BR',
+      data: { url: dados.url || '/' },
+    }),
+  );
+});
+
+// Toque na notificação: volta para uma janela aberta do app ou abre uma nova.
+self.addEventListener('notificationclick', (evento) => {
+  evento.notification.close();
+  const destino = new URL((evento.notification.data && evento.notification.data.url) || '/', self.location.origin).href;
+  evento.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((janelas) => {
+      for (const janela of janelas) {
+        if (new URL(janela.url).origin === self.location.origin && 'focus' in janela) {
+          if ('navigate' in janela && janela.url !== destino) janela.navigate(destino).catch(() => {});
+          return janela.focus();
+        }
+      }
+      return self.clients.openWindow(destino);
+    }),
+  );
 });

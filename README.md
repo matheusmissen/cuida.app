@@ -140,6 +140,8 @@ Os dois apps rodam no navegador do celular e podem ser instalados na tela inicia
 - **iPhone:** abrir no Safari → Compartilhar → "Adicionar à Tela de Início".
 - **Android:** no Chrome, "Instalar app" (ou menu → "Adicionar à tela inicial").
 
+As notificações (lembrete do remédio e do check-in para o idoso; alertas para a família) chegam por **web push**, mesmo com o app fechado. No iPhone, só com o app instalado na Tela de Início (iOS 16.4 ou mais novo). A pessoa ativa com um toque: no app do idoso, no cartão "Avisos do Cuida"; no app da família, em Ajustes (ou no cartão do painel).
+
 Cada app tem `public/manifest.webmanifest`, ícones em `public/icones/` e um service worker (`public/sw.js`) que guarda só a casca do app para abrir sem internet; dados de saúde (Supabase, Lia) nunca ficam no cache. Teste: `packages/cliente/test/pwa.test.ts`.
 
 ## Fluxo do remédio (etapa 18–21/11)
