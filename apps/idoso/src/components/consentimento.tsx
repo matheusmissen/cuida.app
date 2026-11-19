@@ -10,7 +10,7 @@ import {
   type Escolhas,
 } from '@cuida/cliente';
 import { BotaoPrincipal, BotaoSecundario, Cartao, cores, espacos, fontes, IconeConfirmado, Paisagem, paisagem, usePeriodo } from '@cuida/visual';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { falar } from '@/lib/voz';
@@ -23,6 +23,7 @@ export function TelaConsentimento({
   erro,
   onConfirmar,
   onVoltar,
+  depois,
 }: {
   apelido: string;
   inicial?: Escolhas;
@@ -32,6 +33,8 @@ export function TelaConsentimento({
   onConfirmar: (escolhas: Escolhas) => void;
   /** "Minha privacidade": voltar sem mudar nada. */
   onVoltar?: () => void;
+  /** Conteúdo depois das permissões (em "Minha privacidade": quem acompanha). */
+  depois?: ReactNode;
 }) {
   const periodo = usePeriodo();
   const [escolhas, setEscolhas] = useState<Escolhas>(inicial);
@@ -112,9 +115,16 @@ export function TelaConsentimento({
               {erro}
             </Text>
           ) : null}
-          <BotaoPrincipal rotulo={enviando ? 'Guardando…' : 'Continuar'} onPress={continuar} desabilitado={enviando} />
+          <BotaoPrincipal
+            rotulo={enviando ? 'Guardando…' : onVoltar ? 'Guardar escolhas' : 'Continuar'}
+            onPress={continuar}
+            desabilitado={enviando}
+          />
           {onVoltar ? <BotaoSecundario rotulo="Voltar sem mudar" onPress={onVoltar} /> : null}
-          <Text style={estilos.nota}>Você pode mudar de ideia quando quiser, em "Minha privacidade", no fim da tela inicial.</Text>
+          {onVoltar ? null : (
+            <Text style={estilos.nota}>Você pode mudar de ideia quando quiser, em "Minha privacidade", no fim da tela inicial.</Text>
+          )}
+          {depois}
         </View>
       </ScrollView>
     </SafeAreaView>
