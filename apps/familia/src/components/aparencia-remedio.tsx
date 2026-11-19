@@ -2,14 +2,14 @@
 // O idoso vê isso na hora do remédio, para reconhecer o que tomar.
 import { CORES_COMPRIMIDO, descricaoDoComprimido, FORMATOS_COMPRIMIDO, type CorComprimido } from '@cuida/cliente';
 import { DesenhoComprimido, IconeConfirmado } from '@cuida/visual';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Botao, cores, Erro, Texto } from '@/components/ui';
 import type { ArquivoEscolhido } from '@/lib/documentos';
 import { tirarFoto } from '@/lib/documentos';
 import { escolherFotoDaGaleria, useFotoRemedio } from '@/lib/remedios';
-import { fontes, paleta } from '@/lib/tema';
+import { fontes, paleta, raios } from '@/lib/tema';
 
 export interface Aparencia {
   cor: string | null;
@@ -32,8 +32,11 @@ function Bolinha({ cor }: { cor: CorComprimido }) {
   );
 }
 
-/** Lista de opções, uma por linha: o que está escolhido fica marcado à direita. Tocar de novo desmarca. */
-function Lista({
+/**
+ * Lista suspensa: o campo mostra a opção escolhida; ao tocar, abre uma janela com as opções, uma por
+ * linha. Tocar numa opção escolhe e fecha. Funciona igual no celular e no navegador.
+ */
+function Suspensa({
   rotulo,
   opcoes,
   valor,
@@ -44,37 +47,67 @@ function Lista({
   valor: string | null;
   aoEscolher: (codigo: string | null) => void;
 }) {
+  const [aberta, setAberta] = useState(false);
+  const atual = opcoes.find((o) => o.codigo === valor) ?? null;
+  const escolher = (codigo: string | null) => {
+    aoEscolher(codigo);
+    setAberta(false);
+  };
   return (
     <View style={{ gap: 6 }}>
       <Text style={estilos.rotulo}>{rotulo}</Text>
-      <View style={estilos.lista} accessibilityRole="radiogroup" aria-label={rotulo}>
-        {opcoes.map((o, i) => {
-          const marcado = valor === o.codigo;
-          return (
-            <Pressable
-              key={o.codigo}
-              accessibilityRole="radio"
-              accessibilityLabel={o.nome}
-              accessibilityState={{ checked: marcado }}
-              onPress={() => aoEscolher(marcado ? null : o.codigo)}
-              style={({ pressed }) => [
-                estilos.item,
-                i > 0 && estilos.itemComDivisor,
-                marcado && estilos.itemMarcado,
-                pressed && { opacity: 0.8 },
-              ]}
-            >
-              <View style={estilos.desenhoItem}>{o.desenho}</View>
-              <Text style={estilos.textoItem} numberOfLines={1}>
-                {o.nome}
-              </Text>
-              <View style={[estilos.radio, marcado && estilos.radioMarcado]}>
-                {marcado ? <IconeConfirmado tamanho={16} cor={paleta.sobreTinta} /> : null}
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${rotulo}: ${atual ? atual.nome : 'escolher'}`}
+        onPress={() => setAberta(true)}
+        style={({ pressed }) => [estilos.campo, pressed && { opacity: 0.85 }]}
+      >
+        {atual ? <View style={estilos.desenhoItem}>{atual.desenho}</View> : null}
+        <Text style={[estilos.textoItem, !atual && { color: cores.suave, fontFamily: fontes.texto }]} numberOfLines={1}>
+          {atual ? atual.nome : 'Escolher'}
+        </Text>
+        <Text style={estilos.seta} accessibilityElementsHidden>
+          ▾
+        </Text>
+      </Pressable>
+
+      <Modal visible={aberta} transparent animationType="fade" onRequestClose={() => setAberta(false)}>
+        <Pressable style={estilos.fundo} onPress={() => setAberta(false)} accessibilityLabel="Fechar">
+          <Pressable style={estilos.janela} onPress={() => {}} accessibilityViewIsModal>
+            <Text style={estilos.tituloJanela}>{rotulo}</Text>
+            <ScrollView style={{ maxHeight: 440 }} contentContainerStyle={estilos.lista}>
+              {opcoes.map((o, i) => {
+                const marcado = valor === o.codigo;
+                return (
+                  <Pressable
+                    key={o.codigo}
+                    accessibilityRole="radio"
+                    accessibilityLabel={o.nome}
+                    accessibilityState={{ checked: marcado }}
+                    onPress={() => escolher(o.codigo)}
+                    style={({ pressed }) => [
+                      estilos.item,
+                      i > 0 && estilos.itemComDivisor,
+                      marcado && estilos.itemMarcado,
+                      pressed && { opacity: 0.8 },
+                    ]}
+                  >
+                    <View style={estilos.desenhoItem}>{o.desenho}</View>
+                    <Text style={estilos.textoItem} numberOfLines={1}>
+                      {o.nome}
+                    </Text>
+                    <View style={[estilos.radio, marcado && estilos.radioMarcado]}>
+                      {marcado ? <IconeConfirmado tamanho={16} cor={paleta.sobreTinta} /> : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            {valor ? <Botao variante="texto" titulo="Deixar sem escolha" onPress={() => escolher(null)} /> : null}
+            <Botao variante="secundario" titulo="Fechar" onPress={() => setAberta(false)} />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -108,7 +141,7 @@ export function EscolhaAparencia({
 
   return (
     <View style={{ gap: 12 }}>
-      <Lista
+      <Suspensa
         rotulo="Formato"
         valor={valor.formato}
         aoEscolher={(formato) => aoMudar({ ...valor, formato })}
@@ -118,7 +151,7 @@ export function EscolhaAparencia({
           desenho: <DesenhoComprimido formato={f.codigo} cor={cor?.hex ?? '#FFFFFF'} duasCores={valor.cor === 'colorido'} tamanho={30} />,
         }))}
       />
-      <Lista
+      <Suspensa
         rotulo="Cor"
         valor={valor.cor}
         aoEscolher={(c) => aoMudar({ ...valor, cor: c })}
@@ -151,6 +184,29 @@ export function EscolhaAparencia({
 
 const estilos = StyleSheet.create({
   rotulo: { fontSize: 14, fontFamily: fontes.textoNegrito, color: cores.secundario },
+  campo: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    borderRadius: raios.pequeno,
+    borderWidth: 1,
+    borderColor: cores.borda,
+    backgroundColor: cores.cartao,
+  },
+  seta: { fontSize: 18, color: cores.texto },
+  fundo: { flex: 1, backgroundColor: 'rgba(24,24,28,0.45)', alignItems: 'center', justifyContent: 'center', padding: 16 },
+  janela: {
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '90%',
+    backgroundColor: cores.fundo,
+    borderRadius: 24,
+    padding: 16,
+    gap: 10,
+  },
+  tituloJanela: { fontFamily: fontes.textoNegrito, fontSize: 18, color: cores.texto, paddingHorizontal: 4 },
   lista: { borderWidth: 1.5, borderColor: cores.borda, borderRadius: 18, overflow: 'hidden', backgroundColor: paleta.cartao },
   item: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12 },
   itemComDivisor: { borderTopWidth: 1, borderTopColor: cores.borda },
