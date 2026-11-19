@@ -9,6 +9,7 @@
 // 5. Check-in diário sem resposta até a tolerância: alerta laranja (uma vez por dia).
 // 6. Lembretes para o idoso por web push: remédio no horário (uma vez por dose) e check-in (uma vez por dia).
 // 7. Lembretes de consulta para o idoso: no dia anterior (a partir das 10h) e 3 horas antes.
+// 8. "Lembrar em 10 minutos": o lembrete do remédio volta por web push, mesmo com o app fechado.
 // Só aceita chave de servidor (o cron): service_role antiga ou chave secreta nova (_shared/autorizacao.ts).
 // Os apps nunca chamam esta função.
 
@@ -25,6 +26,7 @@ import {
   notificacaoDaConsulta,
   notificacaoDoCheckin,
   notificacaoDoRemedio,
+  dosesAdiadasParaLembrar,
   type DoseParaLembrar,
 } from '../_shared/lembretes.ts';
 import { notificarUsuarios } from '../_shared/notificar.ts';
@@ -364,6 +366,40 @@ Deno.serve(async (req) => {
     lembretesConsulta += await notificarUsuarios(supabase, [c.pacientes.usuario_id], 'idoso', notificacaoDaConsulta(tipo, apelido, c));
   }
 
+  // "Lembrar em 10 minutos" (adiar_dose): manda de novo o lembrete do remédio, uma vez por adiamento.
+  let lembretesAdiados = 0;
+  const { data: adiadas } = await supabase
+    .from('doses')
+    .select('id, adiada_ate, confirmado_em, lembrete_adiado_em, horarios!inner(remedios!inner(nome, dose)), pacientes!inner(usuario_id)')
+    .is('confirmado_em', null)
+    .is('lembrete_adiado_em', null)
+    .lte('adiada_ate', agora.toISOString());
+  // deno-lint-ignore no-explicit-any
+  const linhasAdiadas = (adiadas ?? []) as any[];
+  const voltar = new Set(
+    dosesAdiadasParaLembrar(
+      linhasAdiadas.map((l) => ({ id: l.id, adiadaAte: l.adiada_ate, confirmadoEm: l.confirmado_em, lembreteAdiadoEm: l.lembrete_adiado_em })),
+      agora,
+    ),
+  );
+  for (const l of linhasAdiadas) {
+    const usuario = l.pacientes?.usuario_id as string | null;
+    if (!voltar.has(l.id) || !usuario) continue;
+    const { data: marcada } = await supabase
+      .from('doses')
+      .update({ lembrete_adiado_em: agora.toISOString() })
+      .eq('id', l.id)
+      .is('lembrete_adiado_em', null)
+      .select('id');
+    if (!marcada || marcada.length === 0) continue;
+    lembretesAdiados += await notificarUsuarios(
+      supabase,
+      [usuario],
+      'idoso',
+      notificacaoDoRemedio(l.id, l.horarios.remedios.nome, l.horarios.remedios.dose),
+    );
+  }
+
   return Response.json({
     alertas: alertasCriados,
     escalados,
@@ -372,5 +408,6 @@ Deno.serve(async (req) => {
     lembretes_remedio: lembretesRemedio,
     lembretes_checkin: lembretesCheckin,
     lembretes_consulta: lembretesConsulta,
+    lembretes_adiados: lembretesAdiados,
   });
 });

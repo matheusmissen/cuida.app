@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { TEMPOS_DEMONSTRACAO } from '../../../packages/regras/src/index.ts';
 import {
   deveLembrarCheckin,
+  dosesAdiadasParaLembrar,
   dosesParaLembrar,
   notificacaoDoAlerta,
   notificacaoDoCheckin,
@@ -106,4 +107,20 @@ test('consultas: lembrete na véspera a partir das 10h e 3 horas antes, uma vez 
   const n = notificacaoDaConsulta('vespera', 'Maria', { id: 'c1', quando: c.quando, medico: 'Dra. Ana', especialidade: 'Hematologia', local: 'Clínica Exemplo' });
   assert.equal(n.titulo, 'Maria, amanhã tem consulta');
   assert.equal(n.corpo, 'Às 14:00, com Dra. Ana, Hematologia. Local: Clínica Exemplo.');
+});
+
+test('lembrar em 10 minutos: volta uma vez, só sem "Tomei", e não manda adiamento velho', () => {
+  const adiada = (p: Partial<Parameters<typeof dosesAdiadasParaLembrar>[0][0]>) => ({
+    id: 'd1',
+    adiadaAte: em('08:10').toISOString(),
+    confirmadoEm: null,
+    lembreteAdiadoEm: null,
+    ...p,
+  });
+  assert.deepEqual(dosesAdiadasParaLembrar([adiada({})], em('08:09')), [], 'ainda não deu a hora');
+  assert.deepEqual(dosesAdiadasParaLembrar([adiada({})], em('08:10')), ['d1']);
+  assert.deepEqual(dosesAdiadasParaLembrar([adiada({ lembreteAdiadoEm: em('08:10').toISOString() })], em('08:11')), []);
+  assert.deepEqual(dosesAdiadasParaLembrar([adiada({ confirmadoEm: em('08:05').toISOString() })], em('08:10')), []);
+  assert.deepEqual(dosesAdiadasParaLembrar([adiada({ adiadaAte: null })], em('08:10')), []);
+  assert.deepEqual(dosesAdiadasParaLembrar([adiada({})], em('09:10')), [], 'depois de 1 hora não manda mais');
 });

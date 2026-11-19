@@ -44,6 +44,31 @@ export function dosesParaLembrar(doses: DoseParaLembrar[], tempos: Map<string, T
     .map((d) => d.id);
 }
 
+export interface DoseAdiada {
+  id: string;
+  adiadaAte: string | null;
+  confirmadoEm: string | null;
+  lembreteAdiadoEm: string | null;
+}
+
+/** Adiamento velho demais não vira lembrete (o servidor ficou fora do ar, por exemplo). */
+export const ADIAMENTO_VALE_MIN = 60;
+
+/**
+ * "Lembrar em 10 minutos": doses cujo lembrete volta agora, mesmo com o app fechado.
+ * Já passou a hora do adiamento, sem "Tomei" e sem lembrete deste adiamento. Adiar não é tomar:
+ * o alerta da família segue a tolerância da dose, à parte.
+ */
+export function dosesAdiadasParaLembrar(doses: DoseAdiada[], agora: Date): string[] {
+  return doses
+    .filter((d) => {
+      if (!d.adiadaAte || d.confirmadoEm || d.lembreteAdiadoEm) return false;
+      const passou = agora.getTime() - Date.parse(d.adiadaAte);
+      return passou >= 0 && passou < ADIAMENTO_VALE_MIN * MINUTO;
+    })
+    .map((d) => d.id);
+}
+
 export function notificacaoDoRemedio(doseId: string, nomeRemedio: string, dose: string | null): Notificacao {
   return {
     titulo: 'Hora do remédio',
