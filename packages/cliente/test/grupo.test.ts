@@ -44,3 +44,16 @@ test('papéis: nomes, ordem (responsável primeiro) e quem muda remédios', () =
   assert.equal(podeMudarRemedios('apoio'), false);
   assert.equal(podeMudarRemedios(null), false);
 });
+
+test('idoso tira alguém do grupo: confirmação clara e nunca deixa o grupo vazio', async () => {
+  const { confirmacaoTirarDoGrupo, papelParaOIdoso } = await import('../src/grupo.ts');
+  const lucas = { usuario_id: 'l', nome: 'Lucas', papel: 'principal' as const };
+  const ana = { usuario_id: 'a', nome: 'Ana', papel: 'apoio' as const };
+  assert.equal(papelParaOIdoso('principal'), 'Responsável pelos seus remédios');
+  const tirarAna = confirmacaoTirarDoGrupo(ana, [lucas, ana]);
+  assert.equal(tirarAna.podeTirar, true);
+  assert.equal(tirarAna.pergunta, 'Tirar Ana do grupo?');
+  const tirarLucas = confirmacaoTirarDoGrupo(lucas, [lucas, ana]);
+  assert.match(tirarLucas.detalhe, /Ana passa a cuidar dos seus remédios/);
+  assert.equal(confirmacaoTirarDoGrupo(lucas, [lucas]).podeTirar, false);
+});

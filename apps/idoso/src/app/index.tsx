@@ -27,6 +27,7 @@ import { Alarme } from '@/components/alarme';
 import { AvisosNotificacao } from '@/components/avisos-notificacao';
 import { TelaCheckin } from '@/components/checkin';
 import { TelaConsentimento } from '@/components/consentimento';
+import { QuemAcompanha } from '@/components/quem-acompanha';
 import { TelaConversa } from '@/components/conversa';
 import { TelaFamiliaAvisada } from '@/components/familia-avisada';
 import { IconeMicrofone, IconeTelefone } from '@/components/icones';
@@ -333,6 +334,7 @@ function TelaDoDia({
             }
           }}
           onVoltar={() => setModo('inicio')}
+          depois={<QuemAcompanha />}
         />
         {alarme}
       </>

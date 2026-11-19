@@ -50,3 +50,38 @@ export function ordenarGrupo<T extends Pick<MembroDoGrupo, 'papel' | 'ordem_esca
 
 /** Só o responsável principal muda a rotina de remédios (o banco também garante). */
 export const podeMudarRemedios = (papel: Papel | null | undefined) => papel === 'principal';
+
+// "Minha privacidade" no celular do idoso: quem acompanha e tirar alguém do grupo.
+export interface MembroParaOIdoso {
+  usuario_id: string;
+  nome: string;
+  papel: 'principal' | 'apoio';
+}
+
+export function papelParaOIdoso(papel: 'principal' | 'apoio'): string {
+  return papel === 'principal' ? 'Responsável pelos seus remédios' : 'Acompanha você';
+}
+
+/** O que a tela pergunta antes de tirar alguém. `podeTirar` é falso quando é a única pessoa do grupo. */
+export function confirmacaoTirarDoGrupo(pessoa: MembroParaOIdoso, grupo: MembroParaOIdoso[]): {
+  podeTirar: boolean;
+  pergunta: string;
+  detalhe: string;
+} {
+  const outros = grupo.filter((p) => p.usuario_id !== pessoa.usuario_id);
+  if (outros.length === 0) {
+    return {
+      podeTirar: false,
+      pergunta: `${pessoa.nome} é a única pessoa do grupo.`,
+      detalhe: 'Alguém precisa cuidar dos seus remédios. Peça para outra pessoa entrar no grupo antes.',
+    };
+  }
+  const novo = pessoa.papel === 'principal' ? outros.find((p) => p.papel === 'apoio') ?? outros[0] : null;
+  return {
+    podeTirar: true,
+    pergunta: `Tirar ${pessoa.nome} do grupo?`,
+    detalhe: novo
+      ? `${pessoa.nome} não vai mais ver nada. ${novo.nome} passa a cuidar dos seus remédios.`
+      : `${pessoa.nome} não vai mais ver nada nem receber avisos.`,
+  };
+}
