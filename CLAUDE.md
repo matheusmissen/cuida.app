@@ -75,7 +75,7 @@ O objetivo do MVP é provar que **o idoso usa sozinho e a família fica sabendo 
 - **Hora do remédio:** `apps/idoso/src/components/alarme.tsx` (foto da caixa ou desenho do comprimido, "Tomei", "Lembrar em 10 minutos", "Ouvir de novo"). Cor e formato em `packages/cliente/src/comprimido.ts`; fotos no bucket privado `remedios` (`<paciente_id>/caixa-...`; só o responsável envia). Adiar não é tomar: a família continua sendo avisada na tolerância. O adiamento também vai ao servidor (`adiar_dose`, colunas `doses.adiada_ate`/`lembrete_adiado_em`) e a `verificar-doses` manda o lembrete de novo por web push, mesmo com o app fechado (`dosesAdiadasParaLembrar` em `_shared/lembretes.ts`).
 - **Alertas da família:** `apps/familia/src/components/tela-alerta.tsx` (o que aconteceu, quem foi avisado, quando o grupo será avisado, "Reenviar lembrete" pela Edge Function `reenviar-lembrete`, "Ligar", "Já falei com..., está tudo bem").
 - **Consultas:** tabela `consultas`; família em `app/consultas.tsx` e `CartaoProximaConsulta` no painel; idoso vê a próxima em até 7 dias. Lembretes ao idoso no dia anterior (a partir das 10h) e 3 horas antes (`consultasParaLembrar` em `_shared/lembretes.ts`).
-- **Documentos e receitas:** tabela `documentos` e bucket privado `documentos`. A Edge Function `ler-receita` só transcreve e sugere (`_shared/receita.ts`); **nunca cria alarmes**. A família confere em "Confira a receita" e `criar_alarmes_da_receita` cria só os itens conferidos. Exames e relatórios só são guardados.
+- **Documentos, receitas e pedidos médicos:** tabela `documentos` e bucket privado `documentos`. A Edge Function `ler-receita` lê receitas e pedidos médicos e só transcreve e sugere (`_shared/receita.ts` e `_shared/pedido.ts`); **nunca cria alarmes nem consultas**. Receita: a família confere em "Confira a receita" e `criar_alarmes_da_receita` cria só os itens conferidos. Pedido médico (pedido, guia ou cartão de retorno): a Lia sugere data (escrita ou pelo prazo, como "retorno em 30 dias"), médico, especialidade, local e preparo; a família confere em "Confira o pedido" (`app/documentos/pedido.tsx`) e `conferir_pedido` cria a consulta (ou só guarda); `documentos.consulta_id` liga o pedido à consulta. Exames e relatórios só são guardados.
 - **"Preciso de ajuda":** Edge Function `pedir-ajuda` (grava por `pedir_ajuda()` e manda push); se falhar, chama `pedir_ajuda()` direto; sem internet, a tela oferece o SAMU (192) e não diz "família avisada".
 - **`verificar-doses`** (pg_cron, a cada minuto; só aceita chave de servidor, `_shared/autorizacao.ts`): gera as doses, cria os alertas de dose e de check-in sem resposta, faz a escalada, o alerta de 24 h de silêncio e manda os lembretes por web push (remédio, remédio adiado, check-in e consultas).
 - **PWA:** cada app tem `public/` com `manifest.webmanifest`, ícones e `sw.js` (o mesmo nos dois; ao mudar, troque `VERSAO` e copie para os dois).
@@ -104,7 +104,6 @@ O objetivo do MVP é provar que **o idoso usa sozinho e a família fica sabendo 
 ## Falta (escolha do dono)
 
 - Link do vídeo no README.
-- A Lia ler o pedido médico e sugerir a consulta (PRD, seção 7).
 - "Apagar minha conta" no app (os termos ainda não prometem isso).
 
 ## Como trabalhar neste repositório

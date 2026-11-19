@@ -42,6 +42,8 @@ O Cuida é um **web app instalável (PWA)**. Roda no navegador do celular e vai 
 - painel do dia, com o último check-in, os remédios e os alertas em tempo real;
 - cadastro de remédios;
 - receitas lidas pela IA, que **a família confere antes** de qualquer alarme existir;
+- pedidos médicos lidos pela IA: ela sugere a consulta (data, médico, especialidade, local e preparo), e a família confere antes de salvar;
+- consultas, com lembrete para o idoso no dia anterior e 3 horas antes;
 - grupo de cuidado, com um responsável e acompanhantes e convites por código;
 - notificações por web push.
 
@@ -61,9 +63,10 @@ O Cuida é um **web app instalável (PWA)**. Roda no navegador do celular e vai 
  │   registrar_consentimento, ve_saude (quem da família vê os dados)...               │
  │ Edge Functions (Deno):                                                             │
  │   agente ............ conversa com a Lia (o LLM só transforma a fala em dados)     │
- │   verificar-doses ... pg_cron a cada minuto: doses esquecidas, check-in sem         │
+ │   verificar-doses ... pg_cron a cada minuto: doses esquecidas, check-in sem        │
  │                       resposta, escalada, 24 h de silêncio, lembretes ao idoso     │
- │   registrar-checkin · pedir-ajuda · reenviar-lembrete · ler-receita                │
+ │   registrar-checkin · pedir-ajuda · reenviar-lembrete · ler-receita (receitas e    │
+ │                       pedidos médicos: a IA só sugere, a família confere)          │
  │ packages/regras: regras de alerta determinísticas e testadas, sem IA               │
  │ Web push (VAPID, só WebCrypto) · Realtime · Storage privado (documentos)           │
  └────────────────────────────────────────────────────────────────────────────────────┘
@@ -95,7 +98,7 @@ supabase/
 
 ```bash
 npm install
-npm test            # 271 testes: motor de regras, lógica dos apps e das Edge Functions
+npm test            # 282 testes: motor de regras, lógica dos apps e das Edge Functions
 npm run typecheck   # tipos dos dois apps e das Edge Functions
 ```
 

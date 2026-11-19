@@ -1,13 +1,17 @@
-// Edge Function `ler-receita`: lê a foto (ou PDF) de uma receita com a API da Anthropic e grava
-// SUGESTÕES de remédios e horários em documentos.leitura, com status aguardando_conferencia.
-// Nunca cria alarmes: a família confere no app e chama criar_alarmes_da_receita.
+// Edge Function `ler-receita`: lê a foto (ou PDF) de uma receita ou de um pedido médico com a API da
+// Anthropic e grava SUGESTÕES em documentos.leitura, com status aguardando_conferencia.
+// - Receita: remédios e horários (_shared/receita.ts). Nunca cria alarmes: a família confere e chama
+//   criar_alarmes_da_receita.
+// - Pedido médico, guia ou cartão de retorno: data, médico, especialidade, local e preparo
+//   (_shared/pedido.ts). Nunca cria consulta: a família confere e chama conferir_pedido.
 //
 // Entrada: POST { documento_id } com o token de um cuidador do paciente.
-// Saída:   { status, itens, alarmes } ou { erro }.
+// Saída:   receita { status, itens, alarmes }; pedido { status, pedido }; ou { erro }.
 // Segredos: LLM_API_KEY. Opcional: LLM_MODEL_VISAO (padrão claude-sonnet-5-5, melhor para letra de médico).
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { contarAlarmes, FERRAMENTA_LEITURA, INSTRUCOES_LEITURA, normalizarLeitura } from '../_shared/receita.ts';
+import { FERRAMENTA_PEDIDO, hojeEmBrasilia, INSTRUCOES_PEDIDO, normalizarPedido } from '../_shared/pedido.ts';
 
 const MODELO = Deno.env.get('LLM_MODEL_VISAO') ?? 'claude-sonnet-5-5';
 const TAMANHO_MAXIMO = 5 * 1024 * 1024; // limite de imagem da API
@@ -52,8 +56,10 @@ Deno.serve(async (req) => {
     .eq('id', corpo.documento_id)
     .single();
   if (!doc) return json({ erro: 'documento não encontrado' }, 404);
-  if (doc.tipo !== 'receita') return json({ erro: 'só receitas são lidas' }, 400);
-  if (doc.status === 'conferida') return json({ erro: 'receita já conferida' }, 409);
+  if (doc.tipo !== 'receita' && doc.tipo !== 'pedido') return json({ erro: 'só receitas e pedidos médicos são lidos' }, 400);
+  const ehPedido = doc.tipo === 'pedido';
+  if (doc.status === 'conferida') return json({ erro: ehPedido ? 'pedido já conferido' : 'receita já conferida' }, 409);
+  const ferramenta = ehPedido ? FERRAMENTA_PEDIDO : FERRAMENTA_LEITURA;
 
   // Servidor (service role): baixa o arquivo e grava a leitura, que o app não pode alterar.
   const db = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
@@ -91,17 +97,30 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: MODELO,
         max_tokens: 2000,
-        system: INSTRUCOES_LEITURA,
-        tools: [FERRAMENTA_LEITURA],
-        tool_choice: { type: 'tool', name: FERRAMENTA_LEITURA.name },
-        messages: [{ role: 'user', content: [anexo, { type: 'text', text: 'Transcreva os remédios desta receita.' }] }],
+        system: ehPedido ? INSTRUCOES_PEDIDO : INSTRUCOES_LEITURA,
+        tools: [ferramenta],
+        tool_choice: { type: 'tool', name: ferramenta.name },
+        messages: [
+          {
+            role: 'user',
+            content: [
+              anexo,
+              { type: 'text', text: ehPedido ? 'Transcreva este pedido médico.' : 'Transcreva os remédios desta receita.' },
+            ],
+          },
+        ],
       }),
     });
     if (!r.ok) throw new Error(`LLM ${r.status}: ${await r.text()}`);
     const msg = await r.json();
     // deno-lint-ignore no-explicit-any
-    const uso = (msg.content as any[]).find((b) => b.type === 'tool_use' && b.name === FERRAMENTA_LEITURA.name);
+    const uso = (msg.content as any[]).find((b) => b.type === 'tool_use' && b.name === ferramenta.name);
 
+    if (ehPedido) {
+      const pedido = normalizarPedido(uso?.input, hojeEmBrasilia(new Date()));
+      await marcar('aguardando_conferencia', { pedido, lido_em: new Date().toISOString(), modelo: MODELO });
+      return json({ status: 'aguardando_conferencia', pedido });
+    }
     const leitura = normalizarLeitura(uso?.input);
     const resultado = { ...leitura, lido_em: new Date().toISOString(), modelo: MODELO };
     await marcar('aguardando_conferencia', resultado);
@@ -109,6 +128,6 @@ Deno.serve(async (req) => {
   } catch (erro) {
     console.error('ler-receita', erro instanceof Error ? erro.message : erro);
     await marcar('erro');
-    return json({ erro: 'não foi possível ler a receita agora; tente de novo ou cadastre à mão' }, 502);
+    return json({ erro: ehPedido ? 'não foi possível ler o pedido agora; tente de novo ou marque a consulta à mão' : 'não foi possível ler a receita agora; tente de novo ou cadastre à mão' }, 502);
   }
 });
