@@ -1,4 +1,4 @@
-// Tela única do idoso (referência: docs/design/telas/Idoso-Inicio.dc.html).
+// Tela única do idoso (visual da Variação E, docs/design.md).
 // Check-in do dia (6 rostinhos, antes de tudo) → início → (microfone) → conversa com a Lia → "Voltar ao início".
 // Nos 3 rostinhos mais baixos, a Lia entra na conversa. O alarme de remédio aparece por cima de tudo.
 // "Preciso de ajuda" fica sempre no fim do início e não depende da IA (pedir-ajuda → pedir_ajuda()).
@@ -22,7 +22,7 @@ import {
 } from '@cuida/cliente';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { temposDoPaciente, type NivelCheckin, type Tempos } from '@cuida/regras';
 import { Alarme } from '@/components/alarme';
@@ -32,8 +32,8 @@ import { TelaConsentimento } from '@/components/consentimento';
 import { QuemAcompanha } from '@/components/quem-acompanha';
 import { TelaConversa } from '@/components/conversa';
 import { TelaFamiliaAvisada } from '@/components/familia-avisada';
-import { IconeMicrofone, IconeTelefone } from '@/components/icones';
-import { BotaoPrincipal, Destaque, Texto } from '@/components/ui';
+import { BotaoAjuda } from '@/components/botao-ajuda';
+import { IconeMicrofone } from '@/components/icones';
 import { TelaInstalar } from '@/components/instalar';
 import { PedirAvisos } from '@/components/pedir-avisos';
 import { PrimeiroAcesso } from '@/components/primeiro-acesso';
@@ -41,7 +41,21 @@ import { useAparelho } from '@/lib/aparelho';
 import { useInstalacao } from '@/lib/instalacao';
 import { useNotificacoes } from '@/lib/notificacoes';
 import { supabase } from '@/lib/supabase';
-import { alvos, cores, espacos, sombras, tamanhos } from '@/lib/tema';
+import {
+  BotaoPrincipal,
+  Cartao,
+  cores,
+  espacos,
+  fontes,
+  IconeCalendario,
+  IconePilula,
+  Paisagem,
+  paisagem,
+  pasteis,
+  Quadradinho,
+  tamanhos,
+  usePeriodo,
+} from '@cuida/visual';
 import { useAdiamentos } from '@/lib/adiamentos';
 import { useCheckin } from '@/lib/use-checkin';
 import { useProximaConsulta } from '@/lib/use-consultas';
@@ -88,14 +102,14 @@ export default function Inicio() {
   if (carregando || instalacao.carregando) {
     return (
       <SafeAreaView style={estilos.centro}>
-        <ActivityIndicator size="large" color={cores.tinta} />
+        <ActivityIndicator size="large" color={cores.primaria} />
       </SafeAreaView>
     );
   }
   if (erro) {
     return (
       <SafeAreaView style={estilos.centro}>
-        <Texto style={{ textAlign: 'center' }}>{erro}</Texto>
+        <Text style={[estilos.texto, { textAlign: 'center' }]}>{erro}</Text>
       </SafeAreaView>
     );
   }
@@ -256,27 +270,7 @@ function TelaDoDia({
     falar(mensagemDaAjuda(resultado).fala);
   };
 
-  const botaoAjuda = (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Preciso de ajuda. Avisa toda a sua família agora."
-      accessibilityState={{ busy: enviandoAjuda, disabled: enviandoAjuda }}
-      disabled={enviandoAjuda}
-      onPress={apertarAjuda}
-      style={({ pressed }) => [estilos.ajuda, (pressed || enviandoAjuda) && { opacity: 0.85 }]}
-    >
-      <View style={estilos.ajudaIcone}>
-        {enviandoAjuda ? (
-          <ActivityIndicator color={cores.sobreTinta} />
-        ) : (
-          <IconeTelefone tamanho={24} cor={cores.sobreTinta} traco={2.2} />
-        )}
-      </View>
-      <Texto tamanho={24} peso="negrito" cor={cores.alerta.texto}>
-        {enviandoAjuda ? 'Avisando sua família…' : 'Preciso de ajuda'}
-      </Texto>
-    </Pressable>
-  );
+  const botaoAjuda = <BotaoAjuda enviando={enviandoAjuda} onPress={apertarAjuda} />;
 
   const alarme = devidas[0] && (
     <Alarme dose={devidas[0]} apelido={apelido} agora={agora} tempos={tempos} onTomei={confirmar} onAdiar={adiarDose} />
@@ -284,24 +278,22 @@ function TelaDoDia({
 
   if (!iniciado) {
     return (
-      <SafeAreaView style={estilos.centro}>
-        <View style={{ gap: 6, alignSelf: 'stretch' }}>
-          <Texto tamanho={20} cor={cores.textoSuave}>
-            {dataCurta(agora)}
-          </Texto>
-          <Destaque tamanho={tamanhos.titulo}>{`${saudacao(agora)},\n${apelido}`}</Destaque>
+      <SafeAreaView style={{ flex: 1, backgroundColor: cores.fundo }} edges={['bottom']}>
+        <Cabecalho agora={agora} apelido={apelido} />
+        <View style={estilos.comecar}>
+          <Text style={[estilos.textoGrande, { textAlign: 'center' }]}>Toque em Começar para abrir o Cuida.</Text>
+          <BotaoPrincipal
+            rotulo="Começar"
+            onPress={() => {
+              setIniciado(true);
+              falar(
+                comLia
+                  ? `${saudacao(agora)}, ${apelido}! Eu sou a ${NOME_ASSISTENTE}. Quando quiser conversar, aperte o botão do microfone.`
+                  : `${saudacao(agora)}, ${apelido}! Se precisar, aperte "Preciso de ajuda".`,
+              );
+            }}
+          />
         </View>
-        <BotaoPrincipal
-          titulo="Começar"
-          onPress={() => {
-            setIniciado(true);
-            falar(
-              comLia
-                ? `${saudacao(agora)}, ${apelido}! Eu sou a ${NOME_ASSISTENTE}. Quando quiser conversar, aperte o botão do microfone.`
-                : `${saudacao(agora)}, ${apelido}! Se precisar, aperte "Preciso de ajuda".`,
-            );
-          }}
-        />
       </SafeAreaView>
     );
   }
@@ -366,146 +358,121 @@ function TelaDoDia({
   const rotuloMic = convite ? `Responder à ${NOME_ASSISTENTE}` : `Falar com a ${NOME_ASSISTENTE}`;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: cores.fundo }}>
-      <ScrollView contentContainerStyle={estilos.tela}>
-        <View style={{ gap: 6 }}>
-          <Texto tamanho={20} cor={cores.textoSuave}>
-            {dataCurta(agora)}
-          </Texto>
-          <Destaque tamanho={tamanhos.titulo} accessibilityRole="header">
-            {`${saudacao(agora)},\n${apelido}`}
-          </Destaque>
-        </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: cores.fundo }} edges={['bottom']}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <Cabecalho agora={agora} apelido={apelido} />
+        <View style={estilos.tela}>
+          <AvisosNotificacao />
 
-        <AvisosNotificacao />
-
-        <View style={estilos.remedios}>
-          <View style={estilos.rotulo}>
-            <View style={estilos.ponto} />
-            <Texto tamanho={20} cor={cores.salvia.texto}>
-              Próximo remédio
-            </Texto>
-          </View>
-          {proxima ? (
-            <View style={estilos.proximo}>
-              <Destaque
-                tamanho={tamanhos.horario}
-                style={{
-                  lineHeight: tamanhos.horario,
-                  letterSpacing: -0.02 * tamanhos.horario,
-                }}
-              >
-                {horaCurta(proxima.previsto_em)}
-              </Destaque>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Texto tamanho={24} peso="negrito">
-                  {proxima.horarios.remedios.nome}
-                </Texto>
-                <Texto tamanho={20} cor={cores.salvia.texto}>
-                  {proxima.horarios.remedios.dose}
-                </Texto>
+          <Cartao style={estilos.cartao}>
+            <View style={estilos.rotulo}>
+              <Quadradinho pastel="lilas" tamanho={48}>
+                <IconePilula tamanho={26} cor={pasteis.lilas.icone} />
+              </Quadradinho>
+              <Text style={estilos.rotuloTexto}>Próximo remédio</Text>
+            </View>
+            {proxima ? (
+              <View style={estilos.proximo}>
+                <Text style={estilos.horario}>{horaCurta(proxima.previsto_em)}</Text>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={estilos.nomeRemedio}>{proxima.horarios.remedios.nome}</Text>
+                  <Text style={estilos.textoSuave}>{proxima.horarios.remedios.dose}</Text>
+                </View>
               </View>
+            ) : (
+              <Text style={estilos.nomeRemedio}>Nenhum remédio marcado para depois.</Text>
+            )}
+            {dosesHoje.length > 0 && (
+              <View style={estilos.progresso}>
+                <View style={estilos.barras} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                  {dosesHoje.map((d) => (
+                    <View
+                      key={d.id}
+                      style={[estilos.barra, { backgroundColor: d.confirmado_em ? cores.primaria : pasteis.menta.borda }]}
+                    />
+                  ))}
+                </View>
+                <Text style={estilos.texto}>
+                  <Text style={{ fontFamily: fontes.textoNegrito }}>
+                    {tomadasHoje} de {dosesHoje.length}
+                  </Text>{' '}
+                  remédios hoje
+                </Text>
+              </View>
+            )}
+          </Cartao>
+
+          {consulta && (
+            <Cartao pastel="menta" style={estilos.cartao}>
+              <View style={estilos.rotulo}>
+                <Quadradinho pastel="menta" tamanho={48}>
+                  <IconeCalendario tamanho={26} cor={pasteis.menta.icone} />
+                </Quadradinho>
+                <Text style={estilos.rotuloTexto}>Próxima consulta</Text>
+              </View>
+              <Text style={estilos.titulo}>{quandoPorExtenso(consulta.quando, agora)}</Text>
+              <Text style={estilos.textoGrande}>com {comQuem(consulta)}</Text>
+              {consulta.local ? <Text style={estilos.textoSuave}>{consulta.local}</Text> : null}
+            </Cartao>
+          )}
+
+          {falaRecente && (
+            <Cartao pastel="pessego" style={estilos.cartao}>
+              <View accessibilityLiveRegion="polite" style={{ gap: 6 }}>
+                <Text style={[estilos.rotuloTexto, { color: pasteis.pessego.icone }]}>{NOME_ASSISTENTE}</Text>
+                <Text style={estilos.fala}>{falaRecente}</Text>
+              </View>
+            </Cartao>
+          )}
+
+          {/* Sem o consentimento "conversar com a Lia", o botão da Lia não aparece. */}
+          {comLia ? (
+            <View style={estilos.blocoMic}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={rotuloMic}
+                onPress={() => {
+                  setModo('conversa');
+                  // Sem reconhecimento de fala (ex.: Firefox), a conversa abre com o campo de texto.
+                  if (conversa.podeOuvir) conversa.comecar();
+                }}
+                style={({ pressed }) => [estilos.mic, pressed && { opacity: 0.85 }]}
+              >
+                <IconeMicrofone tamanho={58} cor={cores.sobrePrimaria} traco={2.1} />
+              </Pressable>
+              <Text style={[estilos.titulo, { textAlign: 'center' }]}>{rotuloMic}</Text>
             </View>
           ) : (
-            <Texto tamanho={24} peso="negrito">
-              Nenhum remédio marcado para depois.
-            </Texto>
+            <View style={{ flexGrow: 1 }} />
           )}
-          {dosesHoje.length > 0 && (
-            <View style={estilos.progresso}>
-              <View style={estilos.barras} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                {dosesHoje.map((d) => (
-                  <View
-                    key={d.id}
-                    style={[
-                      estilos.barra,
-                      {
-                        backgroundColor: d.confirmado_em ? cores.salvia.forte : cores.salvia.borda,
-                      },
-                    ]}
-                  />
-                ))}
-              </View>
-              <Texto tamanho={20}>
-                <Texto tamanho={20} peso="negrito">
-                  {tomadasHoje} de {dosesHoje.length}
-                </Texto>{' '}
-                remédios hoje
-              </Texto>
-            </View>
-          )}
-        </View>
 
-        {consulta && (
-          <View style={estilos.consulta} accessibilityRole="summary">
-            <Texto tamanho={20} peso="negrito" cor={cores.pessego.texto}>
-              Próxima consulta
-            </Texto>
-            <Destaque tamanho={28} style={{ lineHeight: 34 }}>
-              {quandoPorExtenso(consulta.quando, agora)}
-            </Destaque>
-            <Texto tamanho={22}>com {comQuem(consulta)}</Texto>
-            {consulta.local ? (
-              <Texto tamanho={20} cor={cores.textoSuave}>
-                {consulta.local}
-              </Texto>
-            ) : null}
-          </View>
-        )}
+          {botaoAjuda}
 
-        {falaRecente && (
-          <View style={estilos.lia} accessibilityLiveRegion="polite">
-            <Texto tamanho={20} peso="negrito" cor={cores.lilas.texto}>
-              {NOME_ASSISTENTE}
-            </Texto>
-            <Destaque tamanho={tamanhos.destaque} style={{ lineHeight: 30 }}>
-              {falaRecente}
-            </Destaque>
-          </View>
-        )}
-
-        {/* Sem o consentimento "conversar com a Lia", o botão da Lia não aparece. */}
-        {comLia ? (
-          <View style={estilos.blocoMic}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={rotuloMic}
-              onPress={() => {
-                setModo('conversa');
-                // Sem reconhecimento de fala (ex.: Firefox), a conversa abre com o campo de texto.
-                if (conversa.podeOuvir) conversa.comecar();
-              }}
-              style={({ pressed }) => [estilos.mic, pressed && { opacity: 0.85 }]}
-            >
-              <IconeMicrofone tamanho={60} cor={cores.sobreTinta} traco={1.8} />
-            </Pressable>
-            <Destaque tamanho={28} style={{ marginTop: 14, textAlign: 'center' }}>
-              {rotuloMic}
-            </Destaque>
-          </View>
-        ) : (
-          <View style={{ flexGrow: 1 }} />
-        )}
-
-        {botaoAjuda}
-
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => setModo('privacidade')}
-          style={({ pressed }) => [estilos.privacidade, pressed && { opacity: 0.7 }]}
-        >
-          <Texto
-            tamanho={20}
-            peso="negrito"
-            cor={cores.textoSuave}
-            style={{ textDecorationLine: 'underline', textAlign: 'center' }}
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setModo('privacidade')}
+            style={({ pressed }) => [estilos.privacidade, pressed && { opacity: 0.7 }]}
           >
-            Minha privacidade
-          </Texto>
-        </Pressable>
+            <Text style={estilos.linkPrivacidade}>Minha privacidade</Text>
+          </Pressable>
+        </View>
       </ScrollView>
       {alarme}
     </SafeAreaView>
+  );
+}
+
+/** Topo do início: paisagem com água, data e saudação (cores do texto seguem o dia ou a noite). */
+function Cabecalho({ agora, apelido, altura = 210 }: { agora: Date; apelido: string; altura?: number }) {
+  const periodo = usePeriodo();
+  const cor = paisagem[periodo].texto;
+  return (
+    <Paisagem agua altura={altura}>
+      <Text style={[estilos.data, { color: cor }]}>{dataCurta(agora)}</Text>
+      <Text style={[estilos.saudacao, { color: cor }]} accessibilityRole="header">
+        {`${saudacao(agora)},\n${apelido}`}
+      </Text>
+    </Paisagem>
   );
 }
 
@@ -514,90 +481,81 @@ const estilos = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: espacos.margemTela,
-    gap: 40,
+    padding: espacos.lateral,
     backgroundColor: cores.fundo,
+  },
+  comecar: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 24,
+    padding: espacos.lateral,
     maxWidth: 560,
     width: '100%',
     alignSelf: 'center',
   },
   tela: {
     flexGrow: 1,
-    paddingHorizontal: espacos.margemTela,
-    paddingTop: 36,
-    paddingBottom: 28,
-    gap: 22,
+    paddingHorizontal: espacos.lateral,
+    paddingTop: 20,
+    paddingBottom: 24,
+    gap: espacos.bloco,
     maxWidth: 560,
     width: '100%',
     alignSelf: 'center',
   },
-  remedios: {
-    backgroundColor: cores.salvia.fundo,
-    borderRadius: 34,
-    padding: 22,
-    gap: 16,
-  },
-  rotulo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  ponto: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: cores.salvia.forte,
-  },
+  data: { fontFamily: fontes.texto, fontSize: 20 },
+  saudacao: { fontFamily: fontes.titulo, fontSize: tamanhos.idoso.titulo, lineHeight: 38, marginTop: 4 },
+  cartao: { gap: 14 },
+  rotulo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  rotuloTexto: { fontFamily: fontes.textoNegrito, fontSize: 20, color: cores.texto },
   proximo: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  horario: {
+    fontFamily: fontes.titulo,
+    fontSize: tamanhos.idoso.horario,
+    lineHeight: tamanhos.idoso.horario + 4,
+    color: cores.texto,
+    letterSpacing: -1,
+  },
+  nomeRemedio: { fontFamily: fontes.textoNegrito, fontSize: 24, lineHeight: 30, color: cores.texto },
+  titulo: { fontFamily: fontes.titulo, fontSize: 26, lineHeight: 32, color: cores.texto },
+  texto: { fontFamily: fontes.texto, fontSize: 20, lineHeight: 27, color: cores.texto },
+  textoGrande: { fontFamily: fontes.texto, fontSize: 22, lineHeight: 29, color: cores.texto },
+  textoSuave: { fontFamily: fontes.texto, fontSize: 20, lineHeight: 27, color: cores.textoSuave },
+  fala: { fontFamily: fontes.titulo, fontSize: 24, lineHeight: 31, color: cores.texto },
   progresso: {
-    backgroundColor: cores.salvia.fundoClaro,
-    borderRadius: 22,
-    paddingVertical: 14,
+    backgroundColor: pasteis.menta.fundo,
+    borderColor: pasteis.menta.borda,
+    borderWidth: 1.5,
+    borderRadius: 20,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     gap: 10,
   },
   barras: { flexDirection: 'row', gap: 6 },
   barra: { flex: 1, height: 10, borderRadius: 5 },
-  consulta: { backgroundColor: cores.pessego.fundo, borderRadius: 28, padding: 20, gap: 4 },
-  lia: {
-    backgroundColor: cores.lilas.fundo,
-    borderRadius: 28,
-    padding: 20,
-    gap: 6,
-  },
   blocoMic: {
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 22,
-    paddingVertical: 28,
-  },
-  ajuda: {
-    minHeight: 72,
-    borderRadius: 36,
-    backgroundColor: cores.alerta.fundo,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
-    paddingHorizontal: 20,
-  },
-  ajudaIcone: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: cores.alerta.forte,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  privacidade: {
-    minHeight: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 16,
+    paddingVertical: 22,
   },
   mic: {
-    width: alvos.microfone,
-    height: alvos.microfone,
-    borderRadius: alvos.microfone / 2,
-    backgroundColor: cores.tinta,
+    width: 132,
+    height: 132,
+    borderRadius: 66,
+    backgroundColor: cores.primaria,
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: sombras.haloMicrofone,
+    borderWidth: 10,
+    borderColor: pasteis.menta.fundo,
+  },
+  privacidade: { minHeight: 56, alignItems: 'center', justifyContent: 'center' },
+  linkPrivacidade: {
+    fontFamily: fontes.textoNegrito,
+    fontSize: 20,
+    color: cores.textoSuave,
+    textDecorationLine: 'underline',
+    textAlign: 'center',
   },
 });
