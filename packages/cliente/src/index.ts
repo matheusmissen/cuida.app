@@ -16,3 +16,4 @@ export * from './rostinho.ts';
 export * from './consentimento.ts';
 export * from './comprimido.ts';
 export * from './termos.ts';
+export * from './consultas.ts';

@@ -83,3 +83,27 @@ test('reenviar lembrete: remédio, check-in ou chamado da família', () => {
   assert.equal(outro.urgente, true);
   assert.match(notificacaoDeReenvio('dose.nao_confirmada', 'Dona Maria', em('10:00'), null).titulo, /família/, 'sem a dose, chamado genérico');
 });
+
+test('consultas: lembrete na véspera a partir das 10h e 3 horas antes, uma vez cada', async () => {
+  const { consultasParaLembrar, notificacaoDaConsulta } = await import('./lembretes.ts');
+  // Consulta sábado 28/11 às 14:00 de Brasília (17:00 UTC).
+  const c = { id: 'c1', quando: '2026-11-28T17:00:00Z', lembreteVesperaEm: null, lembreteHorasEm: null };
+  // Sexta 9h (Brasília): ainda cedo para o da véspera.
+  assert.deepEqual(consultasParaLembrar([c], new Date('2026-11-27T12:00:00Z')), []);
+  // Sexta 10h: sai o da véspera.
+  assert.deepEqual(consultasParaLembrar([c], new Date('2026-11-27T13:00:00Z')), [{ id: 'c1', tipo: 'vespera' }]);
+  // Já mandado: não repete.
+  assert.deepEqual(consultasParaLembrar([{ ...c, lembreteVesperaEm: '2026-11-27T13:00:00Z' }], new Date('2026-11-27T20:00:00Z')), []);
+  // Sábado 11:00 (3 h antes): sai o de horas.
+  assert.deepEqual(consultasParaLembrar([c], new Date('2026-11-28T14:00:00Z')), [{ id: 'c1', tipo: 'horas' }]);
+  // Depois da consulta: nada.
+  assert.deepEqual(consultasParaLembrar([c], new Date('2026-11-28T18:00:00Z')), []);
+  // Consulta marcada em cima da hora (daqui a 1 h): só o de horas.
+  assert.deepEqual(
+    consultasParaLembrar([{ ...c, quando: '2026-11-27T14:00:00Z' }], new Date('2026-11-27T13:00:00Z')),
+    [{ id: 'c1', tipo: 'horas' }],
+  );
+  const n = notificacaoDaConsulta('vespera', 'Maria', { id: 'c1', quando: c.quando, medico: 'Dra. Ana', especialidade: 'Hematologia', local: 'Clínica Exemplo' });
+  assert.equal(n.titulo, 'Maria, amanhã tem consulta');
+  assert.equal(n.corpo, 'Às 14:00, com Dra. Ana, Hematologia. Local: Clínica Exemplo.');
+});

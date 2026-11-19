@@ -107,3 +107,59 @@ export function notificacaoDeReenvio(
     urgente: true,
   };
 }
+
+// Consultas (docs/PRD.md, seção 7): lembrete ao idoso no dia anterior (a partir das 10h) e 3 horas antes.
+export interface ConsultaParaLembrar {
+  id: string;
+  quando: string;
+  lembreteVesperaEm: string | null;
+  lembreteHorasEm: string | null;
+}
+
+export type TipoLembreteConsulta = 'vespera' | 'horas';
+
+const HORAS_ANTES = 3;
+const HORA_DA_VESPERA = 10;
+
+/** Quais lembretes de consulta saem agora (cada um uma vez; perto da consulta, só o de "horas"). */
+export function consultasParaLembrar(
+  consultas: ConsultaParaLembrar[],
+  agora: Date,
+): { id: string; tipo: TipoLembreteConsulta }[] {
+  const t = agora.getTime();
+  const horaLocal = new Date(t + FUSO * MINUTO).getUTCHours();
+  const hoje = dataLocal(agora.toISOString());
+  const resultado: { id: string; tipo: TipoLembreteConsulta }[] = [];
+  for (const c of consultas) {
+    const q = Date.parse(c.quando);
+    if (!(q > t)) continue;
+    if (q - t <= HORAS_ANTES * 60 * MINUTO) {
+      if (!c.lembreteHorasEm) resultado.push({ id: c.id, tipo: 'horas' });
+      continue;
+    }
+    const vespera = dataLocal(new Date(q - 24 * 60 * MINUTO).toISOString());
+    if (!c.lembreteVesperaEm && vespera === hoje && horaLocal >= HORA_DA_VESPERA) resultado.push({ id: c.id, tipo: 'vespera' });
+  }
+  return resultado;
+}
+
+function horaCurtaLocal(iso: string): string {
+  const d = new Date(Date.parse(iso) + FUSO * MINUTO);
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+export function notificacaoDaConsulta(
+  tipo: TipoLembreteConsulta,
+  apelido: string,
+  c: { id: string; quando: string; medico: string | null; especialidade: string | null; local: string | null },
+): Notificacao {
+  const com = [c.medico?.trim(), c.especialidade?.trim()].filter(Boolean).join(', ') || 'médico';
+  const onde = c.local?.trim() ? ` Local: ${c.local.trim()}.` : '';
+  return {
+    titulo: tipo === 'vespera' ? `${apelido}, amanhã tem consulta` : `${apelido}, hoje tem consulta`,
+    corpo: `Às ${horaCurtaLocal(c.quando)}, com ${com}.${onde}`,
+    url: '/',
+    etiqueta: `consulta-${c.id}-${tipo}`,
+    urgente: tipo === 'horas',
+  };
+}
