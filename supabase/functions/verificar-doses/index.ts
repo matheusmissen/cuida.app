@@ -8,6 +8,7 @@
 // 4. Nenhuma interação do aparelho do idoso em 24 h: alerta vermelho (uma vez por silêncio).
 // 5. Check-in diário sem resposta até a tolerância: alerta laranja (uma vez por dia).
 // 6. Lembretes para o idoso por web push: remédio no horário (uma vez por dose) e check-in (uma vez por dia).
+// 7. Lembretes de consulta para o idoso: no dia anterior (a partir das 10h) e 3 horas antes.
 // Só aceita chave de servidor (o cron): service_role antiga ou chave secreta nova (_shared/autorizacao.ts).
 // Os apps nunca chamam esta função.
 
@@ -18,8 +19,10 @@ import { checkinsSemResposta } from '../_shared/checkin.ts';
 import { proximosDaEscala } from '../_shared/escala.ts';
 import { avisarFamilia, carregarCuidadores, criarEAvisar, nomeDoPaciente } from '../_shared/alertar.ts';
 import {
+  consultasParaLembrar,
   deveLembrarCheckin,
   dosesParaLembrar,
+  notificacaoDaConsulta,
   notificacaoDoCheckin,
   notificacaoDoRemedio,
   type DoseParaLembrar,
@@ -336,6 +339,31 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Consultas: véspera e 3 horas antes (lembretes.ts, consultasParaLembrar), uma vez cada.
+  let lembretesConsulta = 0;
+  const { data: proximas } = await supabase
+    .from('consultas')
+    .select('id, quando, medico, especialidade, local, lembrete_vespera_em, lembrete_horas_em, pacientes!inner(usuario_id, nome, apelido)')
+    .gt('quando', agora.toISOString())
+    .lte('quando', new Date(agora.getTime() + 40 * HORA).toISOString())
+    .or('lembrete_vespera_em.is.null,lembrete_horas_em.is.null');
+  // deno-lint-ignore no-explicit-any
+  const linhasConsulta = (proximas ?? []) as any[];
+  const aLembrar = consultasParaLembrar(
+    linhasConsulta.map((c) => ({ id: c.id, quando: c.quando, lembreteVesperaEm: c.lembrete_vespera_em, lembreteHorasEm: c.lembrete_horas_em })),
+    agora,
+  );
+  for (const { id, tipo } of aLembrar) {
+    const c = linhasConsulta.find((x) => x.id === id);
+    if (!c?.pacientes?.usuario_id) continue;
+    const coluna = tipo === 'vespera' ? 'lembrete_vespera_em' : 'lembrete_horas_em';
+    // Marca antes de mandar; se outra execução já marcou, não manda de novo.
+    const { data: marcada } = await supabase.from('consultas').update({ [coluna]: agora.toISOString() }).eq('id', id).is(coluna, null).select('id');
+    if (!marcada || marcada.length === 0) continue;
+    const apelido = c.pacientes.apelido || String(c.pacientes.nome).split(' ')[0];
+    lembretesConsulta += await notificarUsuarios(supabase, [c.pacientes.usuario_id], 'idoso', notificacaoDaConsulta(tipo, apelido, c));
+  }
+
   return Response.json({
     alertas: alertasCriados,
     escalados,
@@ -343,5 +371,6 @@ Deno.serve(async (req) => {
     checkins_sem_resposta: checkinsSemResp,
     lembretes_remedio: lembretesRemedio,
     lembretes_checkin: lembretesCheckin,
+    lembretes_consulta: lembretesConsulta,
   });
 });

@@ -7,7 +7,8 @@
 -- O que faz, para a conta de demonstração:
 -- 1. Apaga a paciente que essa conta acompanhava (e tudo dela: remédios, doses, check-ins, alertas).
 -- 2. Cria "Dona Maria" (78 anos, leucemia), com a conta como responsável.
--- 3. Três remédios, uma semana de doses (uma esquecida, já resolvida) e de check-ins com rostinhos.
+-- 3. Três remédios, uma semana de doses (uma esquecida, já resolvida) e de check-ins com rostinhos,
+--    e uma consulta daqui a 2 dias.
 -- 4. Doses de hoje que já passaram ficam como tomadas, para o painel começar limpo.
 -- O celular da Dona Maria começa desconectado e sem as permissões: quem testar faz o primeiro acesso
 -- (código de 4 números) e vê a tela de consentimento.
@@ -81,6 +82,11 @@ begin
   values (v_paciente, 'dose.nao_confirmada', 'laranja', 'Não confirmou Remédio B (pressão) em 30 minutos.',
           ((v_hoje - 2) + time '20:30') at time zone 'America/Sao_Paulo',
           ((v_hoje - 2) + time '20:41') at time zone 'America/Sao_Paulo', v_usuario, 'familia', array[v_usuario]);
+
+  -- Uma consulta daqui a 2 dias (aparece no painel e, no celular, como "Próxima consulta").
+  insert into public.consultas (paciente_id, quando, medico, especialidade, local, observacao, criado_por)
+  values (v_paciente, ((v_hoje + 2) + time '14:00') at time zone 'America/Sao_Paulo', 'Dra. Fictícia', 'Hematologia',
+          'Clínica Exemplo, sala 3', 'Levar os exames de sangue', v_usuario);
 
   insert into public.memoria_paciente (paciente_id, chave, valor) values
     (v_paciente, 'tratamento', 'Dona Maria'),

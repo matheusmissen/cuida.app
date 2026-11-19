@@ -19,6 +19,8 @@ import { CartaoUrgente, useAvisoUrgente } from '@/components/alerta-urgente';
 import { TelaAlerta } from '@/components/tela-alerta';
 import { CadastroPaciente } from '@/components/cadastro-paciente';
 import { CartaoConsentimento } from '@/components/consentimento';
+import { CartaoProximaConsulta } from '@/components/proxima-consulta';
+import { useConsultas } from '@/lib/consultas';
 import { CartaoUltimoCheckin } from '@/components/checkin-diario';
 import { CartaoNotificacoes } from '@/components/notificacoes';
 import { BarraNavegacao, ESPACO_BARRA } from '@/components/navegacao';
@@ -83,6 +85,7 @@ export default function Painel() {
 
 function PainelDoDia({ pacienteId }: { pacienteId: string }) {
   const { paciente, papel } = usePaciente();
+  const { consultas, recarregar: recarregarConsultas } = useConsultas(pacienteId);
   const { sessao } = useSessao();
   const [doses, setDoses] = useState<DoseComRemedio[]>([]);
   const [alertas, setAlertas] = useState<AlertaLinha[]>([]);
@@ -141,11 +144,12 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
     };
   }, [pacienteId, carregar]);
 
-  // Ao voltar de Remédios ou Vincular, atualiza o painel.
+  // Ao voltar de Remédios, Vincular ou Consultas, atualiza o painel.
   useFocusEffect(
     useCallback(() => {
       carregar();
-    }, [carregar]),
+      recarregarConsultas();
+    }, [carregar, recarregarConsultas]),
   );
 
   async function confirmarPelaFamilia(id: string) {
@@ -307,6 +311,7 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
             </Cartao>
 
             <CartaoUltimoCheckin ultimo={ultimoCheckin} agora={agora} />
+            <CartaoProximaConsulta consultas={consultas} agora={agora} />
           </>
         )}
       </ScrollView>

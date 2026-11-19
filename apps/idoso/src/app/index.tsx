@@ -8,10 +8,12 @@ import {
   ehPedidoDeAjuda,
   horaCurta,
   mensagemDaAjuda,
+  comQuem,
   consentimentoDoPaciente,
   pedirAjuda,
   perguntaDoCheckin,
   proximaDose,
+  quandoPorExtenso,
   registrarRostinho,
   respostaAoRostinho,
   saudacao,
@@ -42,6 +44,7 @@ import { supabase } from '@/lib/supabase';
 import { alvos, cores, espacos, sombras, tamanhos } from '@/lib/tema';
 import { useAdiamentos } from '@/lib/adiamentos';
 import { useCheckin } from '@/lib/use-checkin';
+import { useProximaConsulta } from '@/lib/use-consultas';
 import { useConversa } from '@/lib/use-conversa';
 import { useDoses } from '@/lib/use-doses';
 import { falar, NOME_ASSISTENTE, useUltimaFala } from '@/lib/voz';
@@ -164,6 +167,7 @@ function TelaDoDia({
 }) {
   const comLia = consentimento.lia;
   const { doses, agora, confirmar } = useDoses(pacienteId);
+  const consulta = useProximaConsulta(pacienteId, agora);
   const { convite, recarregar: recarregarCheckin } = useCheckin(pacienteId, apelido, horarioCheckin, agora);
   const conversa = useConversa({ aoResponder: recarregarCheckin });
   const [modo, setModo] = useState<Modo>('inicio');
@@ -432,6 +436,23 @@ function TelaDoDia({
           )}
         </View>
 
+        {consulta && (
+          <View style={estilos.consulta} accessibilityRole="summary">
+            <Texto tamanho={20} peso="negrito" cor={cores.pessego.texto}>
+              Próxima consulta
+            </Texto>
+            <Destaque tamanho={28} style={{ lineHeight: 34 }}>
+              {quandoPorExtenso(consulta.quando, agora)}
+            </Destaque>
+            <Texto tamanho={22}>com {comQuem(consulta)}</Texto>
+            {consulta.local ? (
+              <Texto tamanho={20} cor={cores.textoSuave}>
+                {consulta.local}
+              </Texto>
+            ) : null}
+          </View>
+        )}
+
         {falaRecente && (
           <View style={estilos.lia} accessibilityLiveRegion="polite">
             <Texto tamanho={20} peso="negrito" cor={cores.lilas.texto}>
@@ -533,6 +554,7 @@ const estilos = StyleSheet.create({
   },
   barras: { flexDirection: 'row', gap: 6 },
   barra: { flex: 1, height: 10, borderRadius: 5 },
+  consulta: { backgroundColor: cores.pessego.fundo, borderRadius: 28, padding: 20, gap: 4 },
   lia: {
     backgroundColor: cores.lilas.fundo,
     borderRadius: 28,
