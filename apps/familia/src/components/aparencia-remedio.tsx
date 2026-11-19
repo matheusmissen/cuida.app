@@ -1,7 +1,8 @@
 // Como é o remédio (docs/PRD.md, seção 5): cor e formato do comprimido e foto da caixa.
 // O idoso vê isso na hora do remédio, para reconhecer o que tomar.
 import { CORES_COMPRIMIDO, descricaoDoComprimido, FORMATOS_COMPRIMIDO, type CorComprimido } from '@cuida/cliente';
-import { DesenhoComprimido } from '@cuida/visual';
+import { DesenhoComprimido, IconeConfirmado } from '@cuida/visual';
+import type { ReactNode } from 'react';
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Botao, cores, Erro, Texto } from '@/components/ui';
@@ -25,9 +26,56 @@ function Bolinha({ cor }: { cor: CorComprimido }) {
       style={[
         estilos.bolinha,
         { backgroundColor: cor.hex },
-        cor.codigo === 'colorido' && { borderRightColor: '#F6D35B', borderRightWidth: 9 },
+        cor.codigo === 'colorido' && { borderRightColor: '#F6D35B', borderRightWidth: 11 },
       ]}
     />
+  );
+}
+
+/** Lista de opções, uma por linha: o que está escolhido fica marcado à direita. Tocar de novo desmarca. */
+function Lista({
+  rotulo,
+  opcoes,
+  valor,
+  aoEscolher,
+}: {
+  rotulo: string;
+  opcoes: { codigo: string; nome: string; desenho: ReactNode }[];
+  valor: string | null;
+  aoEscolher: (codigo: string | null) => void;
+}) {
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={estilos.rotulo}>{rotulo}</Text>
+      <View style={estilos.lista} accessibilityRole="radiogroup" aria-label={rotulo}>
+        {opcoes.map((o, i) => {
+          const marcado = valor === o.codigo;
+          return (
+            <Pressable
+              key={o.codigo}
+              accessibilityRole="radio"
+              accessibilityLabel={o.nome}
+              accessibilityState={{ checked: marcado }}
+              onPress={() => aoEscolher(marcado ? null : o.codigo)}
+              style={({ pressed }) => [
+                estilos.item,
+                i > 0 && estilos.itemComDivisor,
+                marcado && estilos.itemMarcado,
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <View style={estilos.desenhoItem}>{o.desenho}</View>
+              <Text style={estilos.textoItem} numberOfLines={1}>
+                {o.nome}
+              </Text>
+              <View style={[estilos.radio, marcado && estilos.radioMarcado]}>
+                {marcado ? <IconeConfirmado tamanho={16} cor={paleta.sobreTinta} /> : null}
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
@@ -60,47 +108,26 @@ export function EscolhaAparencia({
 
   return (
     <View style={{ gap: 12 }}>
-      <View style={{ gap: 6 }}>
-        <Text style={estilos.rotulo}>Formato</Text>
-        <View style={estilos.linha}>
-          {FORMATOS_COMPRIMIDO.map((f) => {
-            const marcado = valor.formato === f.codigo;
-            return (
-              <Pressable
-                key={f.codigo}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: marcado }}
-                onPress={() => aoMudar({ ...valor, formato: marcado ? null : f.codigo })}
-                style={[estilos.opcao, marcado && estilos.marcada]}
-              >
-                <Text style={[estilos.textoOpcao, marcado && { color: paleta.sobreTinta }]}>{f.nome}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={{ gap: 6 }}>
-        <Text style={estilos.rotulo}>Cor</Text>
-        <View style={estilos.linha}>
-          {CORES_COMPRIMIDO.map((c) => {
-            const marcado = valor.cor === c.codigo;
-            return (
-              <Pressable
-                key={c.codigo}
-                accessibilityRole="radio"
-                accessibilityLabel={c.nome}
-                accessibilityState={{ checked: marcado }}
-                onPress={() => aoMudar({ ...valor, cor: marcado ? null : c.codigo })}
-                style={[estilos.opcao, estilos.opcaoCor, marcado && estilos.marcada]}
-              >
-                <Bolinha cor={c} />
-                <Text style={[estilos.textoOpcao, marcado && { color: paleta.sobreTinta }]}>{c.nome}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
+      <Lista
+        rotulo="Formato"
+        valor={valor.formato}
+        aoEscolher={(formato) => aoMudar({ ...valor, formato })}
+        opcoes={FORMATOS_COMPRIMIDO.map((f) => ({
+          codigo: f.codigo,
+          nome: f.nome,
+          desenho: <DesenhoComprimido formato={f.codigo} cor={cor?.hex ?? '#FFFFFF'} duasCores={valor.cor === 'colorido'} tamanho={30} />,
+        }))}
+      />
+      <Lista
+        rotulo="Cor"
+        valor={valor.cor}
+        aoEscolher={(c) => aoMudar({ ...valor, cor: c })}
+        opcoes={CORES_COMPRIMIDO.map((c) => ({
+          codigo: c.codigo,
+          nome: c.nome.charAt(0).toUpperCase() + c.nome.slice(1),
+          desenho: <Bolinha cor={c} />,
+        }))}
+      />
 
       <View style={estilos.previa}>
         {previa ? (
@@ -115,14 +142,8 @@ export function EscolhaAparencia({
           <Texto suave>{previa ? 'Foto da caixa escolhida.' : 'Sem foto da caixa.'}</Texto>
         </View>
       </View>
-      <View style={estilos.linha}>
-        <View style={{ flex: 1 }}>
-          <Botao variante="secundario" titulo="Fotografar a caixa" onPress={() => foto('camera')} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Botao variante="secundario" titulo="Escolher foto" onPress={() => foto('galeria')} />
-        </View>
-      </View>
+      <Botao variante="secundario" titulo="Fotografar a caixa" onPress={() => foto('camera')} />
+      <Botao variante="secundario" titulo="Escolher foto da galeria" onPress={() => foto('galeria')} />
       <Erro mensagem={erro ?? null} />
     </View>
   );
@@ -130,21 +151,23 @@ export function EscolhaAparencia({
 
 const estilos = StyleSheet.create({
   rotulo: { fontSize: 14, fontFamily: fontes.textoNegrito, color: cores.secundario },
-  linha: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  opcao: {
-    minHeight: 44,
-    paddingHorizontal: 14,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: cores.borda,
-    backgroundColor: paleta.cartao,
+  lista: { borderWidth: 1.5, borderColor: cores.borda, borderRadius: 18, overflow: 'hidden', backgroundColor: paleta.cartao },
+  item: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12 },
+  itemComDivisor: { borderTopWidth: 1, borderTopColor: cores.borda },
+  itemMarcado: { backgroundColor: paleta.salvia.fundoClaro },
+  desenhoItem: { width: 32, alignItems: 'center', justifyContent: 'center' },
+  textoItem: { flex: 1, fontFamily: fontes.textoNegrito, fontSize: 16, color: cores.texto },
+  radio: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: cores.suave,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  opcaoCor: { flexDirection: 'row', gap: 8, paddingLeft: 10 },
-  marcada: { backgroundColor: cores.primaria, borderColor: cores.primaria },
-  textoOpcao: { fontFamily: fontes.textoNegrito, fontSize: 15, color: cores.texto },
-  bolinha: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: '#1C2321', overflow: 'hidden' },
+  radioMarcado: { backgroundColor: cores.primaria, borderColor: cores.primaria },
+  bolinha: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: '#1C2321', overflow: 'hidden' },
   previa: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   foto: { width: 72, height: 72, borderRadius: 16 },
   semFoto: {

@@ -68,7 +68,7 @@ export function TelaConsentimento({
               setExplicando(false);
             }}
           />
-          <BotaoSecundario rotulo="Vou falar com a minha família" onPress={() => setExplicando(false)} />
+          <BotaoSecundario rotulo="Falar com a família" onPress={() => setExplicando(false)} />
           <Text style={estilos.nota}>Se tiver dúvida, peça para alguém da sua família ler com você.</Text>
         </ScrollView>
       </SafeAreaView>

@@ -50,7 +50,9 @@ function BotaoBase({ rotulo, onPress, tamanho = 'idoso', desabilitado, icone, st
       ]}
     >
       {icone ? <View style={estilos.icone}>{icone}</View> : null}
-      <Text style={[estilos.texto, { color: cor, fontSize: letra }]}>{rotulo}</Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={tamanho === 'familia' ? 0.8 : 0.9} style={[estilos.texto, { color: cor, fontSize: letra, flexShrink: 1 }]}>
+        {rotulo}
+      </Text>
     </Pressable>
   );
 }

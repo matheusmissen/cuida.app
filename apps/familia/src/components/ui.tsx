@@ -124,7 +124,9 @@ export function Botao({
       ) : (
         <>
           {icone}
-          <Text style={[estilos.textoBotao, { color: corTexto }]}>{titulo}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[estilos.textoBotao, { color: corTexto, flexShrink: 1 }]}>
+            {titulo}
+          </Text>
         </>
       )}
     </Pressable>
