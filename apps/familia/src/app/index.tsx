@@ -279,7 +279,7 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
                 style={estilos.aviso}
               >
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={estilos.rotuloAviso}>{NIVEL[a.nivel].toUpperCase()} · {horaCurta(a.criado_em)}</Text>
+                  <Text style={estilos.rotuloAviso}>{NIVEL[a.nivel]} · {horaCurta(a.criado_em)}</Text>
                   <Text style={estilos.textoAviso}>{a.motivo}</Text>
                 </View>
               </Pressable>
@@ -357,7 +357,7 @@ const estilos = StyleSheet.create({
   numero: { fontFamily: fontes.destaque, fontSize: 34, lineHeight: 38, color: paleta.tinta },
   numeroMenor: { fontSize: 22 },
   aviso: { backgroundColor: paleta.alerta.fundo, borderColor: paleta.alerta.borda, borderWidth: 1.5, borderRadius: 24, paddingVertical: 14, paddingHorizontal: 18 },
-  rotuloAviso: { fontFamily: fontes.textoNegrito, fontSize: 13, letterSpacing: 0.78, color: paleta.alerta.texto },
+  rotuloAviso: { fontFamily: fontes.textoNegrito, fontSize: 15, color: paleta.alerta.texto },
   textoAviso: { fontFamily: fontes.destaque, fontSize: 18, lineHeight: 23, color: paleta.alerta.escuro },
   linhaDose: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingVertical: 6 },
   linhaAlerta: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingVertical: 8 },

@@ -59,7 +59,13 @@ Blocos 96×96px, radius 34px, borda 2px. Olhos e boca na cor escura do nível.
 | 5 | Mal | #F8C4B8 | #DD8574 | #702414 |
 | 6 | Muito mal | #F3AEAE | #D46868 | #6E161C |
 
-Grade de 3 colunas, rótulo embaixo em 18px negrito.
+Grade de 3 colunas, rótulo embaixo em 18px negrito (vitrine e painel da família).
+
+No check-in do idoso, os 6 níveis aparecem em **dois passos**, em opções de largura inteira (rostinho de 80px + rótulo Nunito 800 26px, altura mínima 104px, radius 28px, borda 1.5px #DDD5C8; escolhida: 2.5px #0F5E5A):
+1. Bem (2) / Mais ou menos (3) / Mal (5);
+2. a mais perto entre duas: Muito bem/Bem, Mais ou menos/Não muito bem, Mal/Muito mal, com "Voltar".
+
+Depois, "Você escolheu: …" fica 5 segundos com "Está certo" e "Mudar resposta" antes de guardar sozinho.
 
 ## Paisagem dia / noite
 
@@ -81,8 +87,15 @@ Troca automática pela hora local do aparelho: dia das 6h às 18h; noite das 18h
 
 Símbolo de três pétalas (pêssego #E8875A, verde-petróleo #0F5E5A, lilás #7C6BD6) + palavra "Cuida" em Nunito 800. No app da família: "Cuida Família", com "Família" em #3E4744.
 
-## Regras de acessibilidade
+## Padrões do app do idoso
 
+- **"Preciso de ajuda" fica num rodapé fixo** (fundo #FBF8F3, borda superior 1.5px #DDD5C8), fora da rolagem, no Início e no Check-in. Ao tocar, abre 5 segundos de contagem com "Cancelar" (botão de 90px) e "Avisar agora".
+- **Código de acesso:** 4 caixinhas de 68×84px (radius 20px, borda 2px #A9B3AF; preenchida ou da vez: #0F5E5A, a da vez com 3.5px), tracinho #3E4744 quando vazia. Nada de texto de exemplo que pareça número digitado.
+- **Botão desligado:** fundo #DDD5C8 e texto #3E4744 (6,6:1), sem transparência.
+- **Barras de remédios do dia:** tomada cheia #0F5E5A; falta só com contorno 2px #0F5E5A e fundo branco.
+- **"Tomei":** depois do toque, um ✓ grande ("Anotado!") por 2 segundos, além da fala.
+
+## Regras de acessibilidade
 - Contraste mínimo 4.5:1 em todo texto (3:1 só em títulos de 24px ou mais).
 - Cor nunca é a única informação: status sempre com texto ("Tomou", "Pendente", "Alerta crítico").
 - Botões de verdade (button/link), com rótulo acessível em botões só de ícone.

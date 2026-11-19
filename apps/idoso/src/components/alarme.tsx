@@ -110,7 +110,7 @@ export function Alarme({
               <DesenhoComprimido formato={r.formato} cor={cor?.hex} duasCores={r.cor === 'colorido'} tamanho={96} />
             </View>
           )}
-          <Text style={estilos.nome} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8}>
+          <Text style={estilos.nome} numberOfLines={3}>
             {r.nome}
           </Text>
           <Text style={estilos.dose}>{r.dose}</Text>

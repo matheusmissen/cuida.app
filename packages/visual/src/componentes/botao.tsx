@@ -42,15 +42,16 @@ function BotaoBase({ rotulo, onPress, tamanho = 'idoso', desabilitado, icone, st
         {
           minHeight: altura,
           borderRadius: raios.pilula(altura),
-          backgroundColor: fundo,
-          borderColor: borda,
-          opacity: desabilitado ? 0.5 : pressed ? 0.85 : 1,
+          // Desligado: cor sólida e legível (texto #3E4744 sobre #DDD5C8, 6,6:1), sem transparência.
+          backgroundColor: desabilitado ? cores.borda : fundo,
+          borderColor: desabilitado ? cores.borda : borda,
+          opacity: !desabilitado && pressed ? 0.85 : 1,
         },
         style,
       ]}
     >
       {icone ? <View style={estilos.icone}>{icone}</View> : null}
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={tamanho === 'familia' ? 0.8 : 0.9} style={[estilos.texto, { color: cor, fontSize: letra, flexShrink: 1 }]}>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={tamanho === 'familia' ? 0.8 : 0.9} style={[estilos.texto, { color: desabilitado ? cores.textoSuave : cor, fontSize: letra, flexShrink: 1 }]}>
         {rotulo}
       </Text>
     </Pressable>
