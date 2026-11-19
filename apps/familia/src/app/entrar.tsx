@@ -1,5 +1,5 @@
 import { VERSAO_TERMOS } from '@cuida/cliente';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from 'react-native';
 import { Opcao } from '@/components/opcao';
@@ -15,7 +15,8 @@ export default function Entrar() {
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const { conta } = useLocalSearchParams<{ conta?: string }>();
+  const [aviso, setAviso] = useState<string | null>(conta === 'apagada' ? 'Sua conta foi apagada.' : null);
 
   async function enviar() {
     setErro(null);
