@@ -9,6 +9,13 @@ export interface GrupoParaApagar {
   sozinho: boolean;
 }
 
+/** Conta dos jurados (docs/demo.md): o banco recusa apagá-la (apagar_conta) e o app nem oferece. */
+export const CONTA_DEMONSTRACAO = 'jurados@example.com';
+
+export function ehContaDeDemonstracao(email: string | null | undefined): boolean {
+  return (email ?? '').trim().toLowerCase() === CONTA_DEMONSTRACAO;
+}
+
 /** Palavra que a pessoa escreve para confirmar. */
 export const PALAVRA_APAGAR = 'APAGAR';
 

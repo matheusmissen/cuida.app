@@ -1,7 +1,14 @@
 // Apagar minha conta (LGPD; termos do familiar; visual da Variação E, docs/design.md).
 // Mostra o que acontece em cada grupo (resumo_para_apagar_conta), pede a palavra APAGAR e chama a
 // Edge Function apagar-conta. Depois sai da conta e volta para "Entrar" com o aviso.
-import { apagaDadosDeAlguem, confirmacaoValida, oQueAcontece, PALAVRA_APAGAR, type GrupoParaApagar } from '@cuida/cliente';
+import {
+  apagaDadosDeAlguem,
+  confirmacaoValida,
+  ehContaDeDemonstracao,
+  oQueAcontece,
+  PALAVRA_APAGAR,
+  type GrupoParaApagar,
+} from '@cuida/cliente';
 import { BotaoSecundario, Campo, Cartao, cores, espacos, fontes, IconeVoltar, tamanhos } from '@cuida/visual';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -62,48 +69,58 @@ export default function ApagarConta() {
           </Text>
         </View>
 
-        <Text style={estilos.texto}>
-          A conta {sessao?.user.email ? `${sessao.user.email} ` : ''}e os seus dados serão apagados. Não dá para desfazer.
-        </Text>
-
-        {grupos === null ? (
-          <ActivityIndicator color={cores.primaria} style={{ marginTop: 16 }} />
+        {ehContaDeDemonstracao(sessao?.user.email) ? (
+          <>
+            <Text style={estilos.texto}>Esta é a conta de demonstração: ela não pode ser apagada.</Text>
+            <BotaoSecundario tamanho="familia" rotulo="Voltar aos ajustes" onPress={voltar} />
+          </>
         ) : (
-          <Cartao style={[{ gap: 12 }, apagaDadosDeAlguem(grupos) && estilos.alerta]}>
-            <Text style={estilos.subtitulo}>O que acontece</Text>
-            {frases.length === 0 ? (
-              <Text style={estilos.texto}>Você não está em nenhum grupo de cuidado.</Text>
-            ) : (
-              frases.map((f) => (
-                <Text key={f} style={estilos.texto}>
-                  • {f}
-                </Text>
-              ))
-            )}
-          </Cartao>
-        )}
+          <>
+            <Text style={estilos.texto}>
+              A conta {sessao?.user.email ? `${sessao.user.email} ` : ''}e os seus dados serão apagados. Não dá para
+              desfazer.
+            </Text>
 
-        <Campo
-          rotulo={`Para confirmar, escreva ${PALAVRA_APAGAR}`}
-          value={palavra}
-          onChangeText={setPalavra}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          placeholder={PALAVRA_APAGAR}
-        />
-        {erro && (
-          <Text style={estilos.erro} accessibilityLiveRegion="polite">
-            {erro}
-          </Text>
+            {grupos === null ? (
+              <ActivityIndicator color={cores.primaria} style={{ marginTop: 16 }} />
+            ) : (
+              <Cartao style={[{ gap: 12 }, apagaDadosDeAlguem(grupos) && estilos.alerta]}>
+                <Text style={estilos.subtitulo}>O que acontece</Text>
+                {frases.length === 0 ? (
+                  <Text style={estilos.texto}>Você não está em nenhum grupo de cuidado.</Text>
+                ) : (
+                  frases.map((f) => (
+                    <Text key={f} style={estilos.texto}>
+                      • {f}
+                    </Text>
+                  ))
+                )}
+              </Cartao>
+            )}
+
+            <Campo
+              rotulo={`Para confirmar, escreva ${PALAVRA_APAGAR}`}
+              value={palavra}
+              onChangeText={setPalavra}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              placeholder={PALAVRA_APAGAR}
+            />
+            {erro && (
+              <Text style={estilos.erro} accessibilityLiveRegion="polite">
+                {erro}
+              </Text>
+            )}
+            <Botao
+              variante="perigo"
+              titulo="Apagar minha conta"
+              carregando={apagando}
+              desativado={grupos === null || !confirmacaoValida(palavra)}
+              onPress={apagar}
+            />
+            <BotaoSecundario tamanho="familia" rotulo="Cancelar" onPress={voltar} desabilitado={apagando} />
+          </>
         )}
-        <Botao
-          variante="perigo"
-          titulo="Apagar minha conta"
-          carregando={apagando}
-          desativado={grupos === null || !confirmacaoValida(palavra)}
-          onPress={apagar}
-        />
-        <BotaoSecundario tamanho="familia" rotulo="Cancelar" onPress={voltar} desabilitado={apagando} />
       </ScrollView>
     </SafeAreaView>
   );

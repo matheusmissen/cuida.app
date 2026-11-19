@@ -1,4 +1,4 @@
-import { condicoesParaSalvar, lerTelefone, telefoneFormatado } from '@cuida/cliente';
+import { condicoesParaSalvar, ehContaDeDemonstracao, lerTelefone, telefoneFormatado } from '@cuida/cliente';
 import {
   emModoDemonstracao,
   minutosPorExtenso,
@@ -17,12 +17,15 @@ import { CondicoesSaude, formDoPaciente, type FormCondicoes } from '@/components
 import { BarraNavegacao, ESPACO_BARRA } from '@/components/navegacao';
 import { Botao, Campo, Cartao, Erro, Texto, Titulo, TituloPagina } from '@/components/ui';
 import { usePaciente } from '@/lib/paciente';
+import { useSessao } from '@/lib/sessao';
 import { supabase } from '@/lib/supabase';
 import { espacos, paleta } from '@/lib/tema';
 
 export default function Ajustes() {
   const { paciente, papel } = usePaciente();
   const nome = paciente ? paciente.apelido || paciente.nome : '';
+  const { sessao } = useSessao();
+  const demonstracao = ehContaDeDemonstracao(sessao?.user.email);
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: paleta.fundo }}>
       <ScrollView contentContainerStyle={estilos.conteudo}>
@@ -56,9 +59,15 @@ export default function Ajustes() {
         )}
         <Cartao>
           <Titulo>Sua conta</Titulo>
-          <Texto suave>Sair desconecta só este aparelho. Apagar a conta apaga o seu e-mail e os seus dados.</Texto>
+          {demonstracao ? (
+            <Texto suave>Esta é a conta de demonstração: ela não pode ser apagada. Sair desconecta só este aparelho.</Texto>
+          ) : (
+            <Texto suave>Sair desconecta só este aparelho. Apagar a conta apaga o seu e-mail e os seus dados.</Texto>
+          )}
           <Botao variante="secundario" titulo="Sair da conta" onPress={() => supabase.auth.signOut()} />
-          <Botao variante="texto" titulo="Apagar minha conta" onPress={() => router.push('/apagar-conta')} />
+          {!demonstracao && (
+            <Botao variante="texto" titulo="Apagar minha conta" onPress={() => router.push('/apagar-conta')} />
+          )}
         </Cartao>
       </ScrollView>
       <BarraNavegacao ativa="ajustes" />

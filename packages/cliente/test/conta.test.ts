@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { apagaDadosDeAlguem, confirmacaoValida, oQueAcontece } from '../src/conta.ts';
+import { apagaDadosDeAlguem, confirmacaoValida, ehContaDeDemonstracao, oQueAcontece } from '../src/conta.ts';
 
 test('apagar conta: a confirmação é a palavra APAGAR, sem diferença de maiúsculas', () => {
   assert.equal(confirmacaoValida('APAGAR'), true);
@@ -22,4 +22,11 @@ test('apagar conta: explica o que acontece em cada grupo', () => {
   assert.equal(apagaDadosDeAlguem(grupos), true);
   assert.equal(apagaDadosDeAlguem([grupos[0]]), false);
   assert.deepEqual(oQueAcontece([]), []);
+});
+
+test('apagar conta: a conta de demonstração dos jurados não oferece apagar', () => {
+  assert.equal(ehContaDeDemonstracao('jurados@example.com'), true);
+  assert.equal(ehContaDeDemonstracao(' Jurados@Example.com '), true);
+  assert.equal(ehContaDeDemonstracao('neto@ficticio.dev'), false);
+  assert.equal(ehContaDeDemonstracao(null), false);
 });
