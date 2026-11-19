@@ -26,9 +26,9 @@ Todos os dados são fictícios. "Dona Maria" não existe.
 | 0:00–0:15 | O problema | Idosos que moram sozinhos; a família longe não sabe se o remédio foi tomado nem como a pessoa está. |
 | 0:15–0:40 | Família conecta o celular | Painel da Dona Maria → "Conectar o celular" → "Mostrar o código". No app do idoso, digitar os 4 números. A família vê "Pronto!". |
 | 0:40–1:00 | Consentimento (LGPD) | No idoso: as 3 permissões, cada uma com o seu "Concordo". Na família, em Ajustes → Grupo de cuidado, aparecem as respostas. |
-| 1:00–1:40 | Check-in com rostinhos | O idoso toca em "Mal". A Lia entra na conversa e ele diz "tô quentinha". Na família chega o alerta vermelho: febre em tratamento de leucemia. |
+| 1:00–1:40 | Check-in com rostinhos | O idoso toca em "Mal", depois em "Mal" de novo e em "Está certo". A Lia entra na conversa e ele diz "tô quentinha". Na família chega o alerta vermelho: febre em tratamento de leucemia. |
 | 1:40–2:30 | Remédio esquecido | O alarme toca no idoso e ninguém toca em "Tomei". Depois de 1 minuto, o responsável recebe o alerta laranja. A tela do alerta mostra "Reenviar lembrete" e "Ligar". Sem ação em mais 1 minuto, a acompanhante também é avisada. |
-| 2:30–2:45 | "Tomei" e ajuda | O idoso toca em "Tomei" e o alerta se resolve sozinho. Mostrar o botão "Preciso de ajuda". |
+| 2:30–2:45 | "Tomei" e ajuda | O idoso toca em "Tomei" e o alerta se resolve sozinho. Mostrar o botão "Preciso de ajuda" (fica fixo embaixo; ao tocar, há 5 segundos para cancelar). |
 | 2:45–2:52 | Pedido médico | Na família: Arquivos → Pedidos → "Ler pedido". A Lia sugere data, médica e especialidade; a família escreve o horário e toca em "Criar consulta". |
 | 2:52–3:00 | Fechamento | As regras de alerta são código fixo e testado (a IA só entende a fala); se a IA cair, alarmes e alertas continuam. |
 

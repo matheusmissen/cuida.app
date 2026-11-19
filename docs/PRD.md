@@ -98,7 +98,7 @@ Dados de saúde são dados pessoais sensíveis (LGPD art. 5º, II; art. 11): o c
 1. Instalar o Cuida: boas-vindas com o passo a passo para adicionar à tela inicial. Só avança quando o app está instalado.
 2. Primeiro acesso: no app instalado, digita o código e permite as notificações.
 3. Consentimento: as 3 finalidades, cada uma com seu "Concordo".
-4. Check-in diário: "Como você está hoje?" com os 6 rostinhos, antes de qualquer outra tela.
+4. Check-in diário: "Como você está hoje?" com os 6 rostinhos em dois passos (Bem / Mais ou menos / Mal, depois a mais perto entre duas), com 5 segundos para "Mudar resposta", antes de qualquer outra tela.
 5. Conversa com a Lia: abre quando ele escolhe um dos 3 níveis mais baixos.
 6. Início: próximo remédio e próxima consulta em destaque, atalhos e botão "Falar com a Lia".
 7. Hora do remédio: foto da caixa, cor e formato do comprimido, dose, botão grande "Tomei" e "Me lembre daqui a 10 minutos".
