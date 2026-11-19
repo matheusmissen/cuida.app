@@ -1,6 +1,6 @@
 // Tela 7 do idoso: Hora do remédio (docs/PRD.md, seção 10; visual da Variação E, docs/design.md).
 // Foto da caixa (ou o desenho do comprimido na cor e no formato cadastrados), dose, botão grande "Tomei"
-// e "Me lembre daqui a 10 minutos". No celular ocupa a tela inteira; na web é um modal sobre a página.
+// e "Lembrar em 10 minutos". No celular ocupa a tela inteira; na web é um modal sobre a página.
 import { comoFalarOComprimido, corDoComprimido, deveRealarmar, descricaoDoComprimido, horaCurta, type DoseComRemedio } from '@cuida/cliente';
 import type { Tempos } from '@cuida/regras';
 import {
@@ -47,7 +47,7 @@ export function Alarme({
   /** Tempos do paciente: o alarme fala de novo quando passa a tolerância. */
   tempos?: Tempos;
   onTomei: (doseId: string) => Promise<boolean>;
-  /** "Me lembre daqui a 10 minutos". */
+  /** "Lembrar em 10 minutos". */
   onAdiar: (dose: DoseComRemedio) => void;
 }) {
   const [enviando, setEnviando] = useState(false);
@@ -89,7 +89,7 @@ export function Alarme({
 
   const conteudo = (
     <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }} bounces={false}>
-      <Paisagem altura={170}>
+      <Paisagem altura={128}>
         <Text style={[estilos.chamada, { color: paisagem[periodo].texto }]} accessibilityRole="header">
           {deNovo ? 'Ainda falta tomar' : 'Hora do remédio'}
         </Text>
@@ -102,20 +102,23 @@ export function Alarme({
             <Image
               source={{ uri: foto }}
               style={estilos.foto}
-              contentFit="cover"
+              contentFit="contain"
               accessibilityLabel={`Foto da caixa de ${r.nome}`}
             />
           ) : (
             <View style={estilos.desenho}>
-              <DesenhoComprimido formato={r.formato} cor={cor?.hex} duasCores={r.cor === 'colorido'} tamanho={120} />
+              <DesenhoComprimido formato={r.formato} cor={cor?.hex} duasCores={r.cor === 'colorido'} tamanho={96} />
             </View>
           )}
-          <Text style={estilos.nome}>{r.nome}</Text>
+          <Text style={estilos.nome} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8}>
+            {r.nome}
+          </Text>
           <Text style={estilos.dose}>{r.dose}</Text>
           {como ? (
             <View style={estilos.como}>
-              {foto ? <DesenhoComprimido formato={r.formato} cor={cor?.hex} duasCores={r.cor === 'colorido'} tamanho={40} /> : null}
-              <Text style={estilos.textoComo}>{como}</Text>
+              <Text style={estilos.textoComo}>
+                {como}
+              </Text>
             </View>
           ) : null}
         </Cartao>
@@ -129,7 +132,7 @@ export function Alarme({
           onPress={tomei}
           desabilitado={enviando}
         />
-        <BotaoSecundario rotulo="Me lembre daqui a 10 minutos" onPress={depois} desabilitado={enviando} />
+        <BotaoSecundario rotulo="Lembrar em 10 minutos" onPress={depois} desabilitado={enviando} />
         <Pressable
           accessibilityRole="button"
           onPress={() => falar(frase)}
@@ -161,25 +164,26 @@ export function Alarme({
 }
 
 const estilos = StyleSheet.create({
-  chamada: { fontFamily: fontes.textoNegrito, fontSize: 24 },
-  hora: { fontFamily: fontes.titulo, fontSize: 64, lineHeight: 70, letterSpacing: -1.5 },
-  miolo: { padding: 20, gap: 16, width: '100%', maxWidth: 560, alignSelf: 'center' },
-  remedio: { alignItems: 'center', gap: 8, paddingVertical: 22 },
-  foto: { width: '100%', height: 190, borderRadius: 20, backgroundColor: cores.fundo },
+  chamada: { fontFamily: fontes.textoNegrito, fontSize: 22 },
+  hora: { fontFamily: fontes.titulo, fontSize: 52, lineHeight: 58, letterSpacing: -1.2 },
+  miolo: { paddingHorizontal: 20, paddingTop: 16, gap: 14, width: '100%', maxWidth: 560, alignSelf: 'center' },
+  remedio: { alignItems: 'center', gap: 6, paddingVertical: 18 },
+  // A foto aparece inteira (sem cortar a caixa), numa altura que deixa "Tomei" à vista.
+  foto: { width: '100%', height: 160, borderRadius: 16 },
   desenho: {
-    width: 150,
-    height: 150,
+    width: 128,
+    height: 128,
     borderRadius: 34,
     backgroundColor: cores.fundo,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nome: { fontFamily: fontes.titulo, fontSize: 32, lineHeight: 38, color: cores.texto, textAlign: 'center', marginTop: 6 },
-  dose: { fontFamily: fontes.texto, fontSize: 26, lineHeight: 32, color: cores.textoSuave, textAlign: 'center' },
-  como: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
-  textoComo: { fontFamily: fontes.textoNegrito, fontSize: 22, lineHeight: 28, color: cores.texto },
+  nome: { fontFamily: fontes.titulo, fontSize: 30, lineHeight: 36, color: cores.texto, textAlign: 'center', marginTop: 6 },
+  dose: { fontFamily: fontes.texto, fontSize: 24, lineHeight: 30, color: cores.textoSuave, textAlign: 'center' },
+  como: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4, maxWidth: '100%' },
+  textoComo: { fontFamily: fontes.textoNegrito, fontSize: 20, lineHeight: 26, textAlign: 'center', color: cores.texto, flexShrink: 1 },
   erro: { fontFamily: fontes.textoNegrito, fontSize: 22, color: cores.alertaTexto, textAlign: 'center' },
-  ouvir: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  ouvir: { minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   textoOuvir: { fontFamily: fontes.textoNegrito, fontSize: 22, color: cores.primaria },
   fundoWeb: {
     flex: 1,

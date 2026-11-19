@@ -113,7 +113,7 @@ export default function Conectar() {
           <Text style={estilos.texto}>
             {nome} abre o link no celular e segue o passo a passo para colocar o Cuida na tela de início.
           </Text>
-          <BotaoPrincipal tamanho="familia" rotulo="Enviar link por WhatsApp ou SMS" onPress={enviarLink} />
+          <BotaoPrincipal tamanho="familia" rotulo="Enviar link pelo WhatsApp" onPress={enviarLink} />
           <Text style={estilos.rotulo} selectable>
             {LINK_DO_APP_DO_IDOSO}
           </Text>
