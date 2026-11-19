@@ -1,203 +1,118 @@
-# Cuida — MVP do app de cuidado para idosos que moram sozinhos
+# Cuida — cuidadora virtual para idosos que moram sozinhos
 
 Este arquivo dá ao Claude Code o contexto do projeto. Leia antes de qualquer tarefa.
 
-## Fontes oficiais (a partir de 17/11/2026)
+## Fontes oficiais
 
-- **`docs/PRD.md`** é a fonte oficial do que o MVP faz: telas, regras de alerta, tempos, cadastro, consentimento (LGPD) e o que fica fora do MVP. O Cuida passa a ser um **web app instalável (PWA)**, sem loja de apps.
+- **`docs/PRD.md`** é a fonte oficial do que o MVP faz: telas, regras de alerta, tempos, cadastro, consentimento (LGPD) e o que fica fora do MVP.
 - **`docs/design.md`** é a fonte oficial do visual (Variação E). **Toda tela nova ou ajustada segue `docs/design.md`.**
-- Se este arquivo discordar do PRD ou do design, **valem `docs/PRD.md` e `docs/design.md`**. O restante deste arquivo descreve a versão anterior (guardada na etiqueta `v1-antiga`) e será atualizado aos poucos, conforme as etapas do novo plano forem entregues.
+- Se este arquivo discordar do PRD ou do design, **valem `docs/PRD.md` e `docs/design.md`**.
+- A versão anterior do projeto está na etiqueta `v1-antiga`.
 
 ## Regra de trabalho no Git
 
 - **Nenhuma mudança vai direto para o `main`**: nada de merge nem push no `main`.
 - Cada mudança é feita num ramo próprio, enviada para o GitHub e entra por **pull request**, que o dono do projeto aprova.
+- Mudança no Supabase (migration, Edge Function, segredo) só com autorização do dono, **antes do merge** do pull request que depende dela. Quando a ferramenta de migration pedir uma confirmação que não chega, o dono roda o SQL no SQL Editor e depois conferimos pelo banco.
 
-## O que estamos construindo
+## O que é o Cuida
 
-Dois apps ligados a um backend:
+Um **web app instalável (PWA)**, sem loja de apps, com dois apps ligados ao Supabase:
 
-- **App do idoso** (Expo): uma tela, um botão grande de voz, alarme de remédio em tela cheia com botão "Tomei", check-in diário por voz e botão "Preciso de ajuda".
-- **App da família** (Expo): cadastro do paciente e dos remédios, regras de alerta, painel do dia e recebimento de alertas por push.
+- **App do idoso:** instalar pelo link, primeiro acesso com código de 4 números, consentimento por finalidade, check-in diário com 6 rostinhos, conversa por voz com a Lia, hora do remédio com "Tomei", próxima consulta, "Preciso de ajuda" e "Minha privacidade".
+- **App da família:** cadastro do idoso e dos remédios, conectar o celular do idoso, painel do dia, alertas com escalada, grupo de cuidado, receitas lidas pela IA (conferidas antes de virar alarme), exames, consultas e notificações.
 
-O primeiro usuário real é uma idosa que mora sozinha e trata leucemia. O objetivo do MVP é provar que **o idoso usa sozinho e a família fica sabendo quando algo sai do normal.**
+O objetivo do MVP é provar que **o idoso usa sozinho e a família fica sabendo quando algo sai do normal.**
 
-## Escopo do MVP (só isto)
-
-1. Lembrete de remédio com confirmação "Tomei" e aviso à família se não confirmar.
-2. Check-in diário por voz, com regras de alerta (inclui o modelo de leucemia).
-3. Alertas para a família por push, botão "Preciso de ajuda" e alerta por silêncio de 24 h.
-4. Documentos no app da família (decidido em 16/11): receitas lidas por IA a partir da foto, que sugerem remédios e horários para a família **conferir antes** de criar os alarmes; exames e relatórios médicos guardados (foto ou PDF, data, lista), sem leitura por IA.
-
-**Fora do MVP (não implementar ainda):** extrair valores de exames e gráficos, checagem de golpe, adicionar contato, WhatsApp, planos pagos, parceiros.
+**Fora do MVP (não implementar):** extrair valores de exames e gráficos, checagem de golpe, adicionar contato, WhatsApp integrado, planos pagos, parceiros.
 
 ## Stack
 
-- Monorepo com `apps/idoso`, `apps/familia` (Expo, TypeScript, Expo Router) e `supabase/` (migrations, Edge Functions).
-- Supabase: Postgres, Auth, Storage, Edge Functions, pg_cron. Região São Paulo. Row Level Security em todas as tabelas.
-- Notificações: expo-notifications (locais para alarmes, push para alertas). Usar build de desenvolvimento EAS, não Expo Go.
-- Voz: transcrição no aparelho (reconhecimento de fala do sistema; na web, Web Speech API) e resposta falada com expo-speech. O agente roda na Edge Function `agente`; não há serviço de transcrição no servidor.
-- LLM com tool calling para o agente. Chaves de API só em variáveis de ambiente do servidor, nunca no app.
+- Monorepo: `apps/idoso` e `apps/familia` (Expo, TypeScript, Expo Router, exportados para a web), `packages/regras` (motor de regras), `packages/cliente` (lógica compartilhada dos apps), `packages/visual` (`@cuida/visual`, Variação E) e `supabase/` (migrations, Edge Functions em Deno, testes SQL, script da demo).
+- Supabase (projeto `cuida-app`, ref `rumwnbcefunxrybszrry`, São Paulo): Postgres com **RLS em todas as tabelas**, Auth (e-mail para a família; anônimo para o celular do idoso), Storage privado, Edge Functions, pg_cron (a `verificar-doses` roda a cada minuto) e Vault.
+- Notificações: **web push** (VAPID, só WebCrypto, `supabase/functions/_shared/webpush.ts`) para os dois apps; alarmes locais do expo-notifications só quando roda como app nativo.
+- Voz: transcrição no aparelho (Web Speech API no navegador) e resposta falada; o agente roda na Edge Function `agente` (API da Anthropic, segredo `LLM_API_KEY`).
+- Publicado na Vercel: https://cuida-app-familia.vercel.app e https://cuida-app-idoso.vercel.app (Root Directory `apps/idoso` ou `apps/familia`; build em `apps/*/vercel.json`).
 
-## Design
+## Design (Variação E)
 
-**Visual oficial: Variação E, em `docs/design.md`.** Toda tela nova ou ajustada segue esse guia.
-
-O tema e os componentes base da Variação E ficam em `packages/visual` (`@cuida/visual`): cores, fontes (Nunito 800 e Atkinson Hyperlegible, já carregadas no `_layout` dos dois apps), raios, alturas, `BotaoPrincipal`, `BotaoSecundario`, `Cartao`, `Quadradinho`, `Campo`, `BarraAbas`, `Rostinho`/`GradeRostinhos` e `Paisagem` (dia/noite pela hora do aparelho). Use esses componentes nas telas novas; não copie cores. Ao mudar um valor em `packages/visual/src/tema.ts`, mude também `docs/design.md` (o teste `packages/visual/test/tema.test.ts` confere). Página de conferência: `/vitrine` nos dois apps (componente `Vitrine` do pacote).
-
-Versão anterior (ainda aplicada nas telas existentes, até serem refeitas): "Manhã Clara". Siga `docs/design/README.md` e `docs/design/tokens.json`; as telas de referência estão em `docs/design/telas/` (HTML só para consulta, não importar nos apps).
+- Tema e componentes em `packages/visual`: cores, fontes (Nunito 800 e Atkinson Hyperlegible), `BotaoPrincipal`, `BotaoSecundario`, `Cartao`, `Quadradinho`, `Campo`, `BarraAbas`, `Rostinho`/`GradeRostinhos`/`SeloRostinho`, `Paisagem`, `DesenhoComprimido` e ícones. Use esses componentes; não copie cores. Ao mudar `packages/visual/src/tema.ts`, mude também `docs/design.md` (o teste `packages/visual/test/tema.test.ts` confere). Conferência visual: `/vitrine` nos dois apps.
+- Botões ficam em **uma linha**: textos curtos; o botão diminui a letra se faltar espaço (no idoso, nunca abaixo de 20).
+- Telas já na Variação E: idoso (instalar, primeiro acesso, avisos, consentimento/Minha privacidade, check-in, hora do remédio); família (conectar o celular, alerta, grupo, convite, consultas, termos, cor/formato/foto do remédio). Ainda no visual anterior "Manhã Clara" (`docs/design/tokens.json`): início e conversa do idoso; painel, remédios, documentos, alertas, ajustes e entrar da família.
 
 ## Regras de interface do app do idoso
 
-- Interface em português do Brasil. Letra mínima de 20 pt, alto contraste, botões de no mínimo 64 px.
-- Nenhum menu, nenhuma configuração, nenhum gesto de deslizar. Tudo é configurado pelo app da família.
-- Toda resposta da assistente sai em voz e em texto grande.
-- Nome da assistente: Lia (configurável depois).
-
-## Modelo de dados
-
-| Tabela | Campos principais |
-| --- | --- |
-| pacientes | id, nome, apelido, data_nascimento, condicoes[], medico_contato, consentimento_em |
-| cuidadores | id, usuario_id, paciente_id, papel (principal, apoio), ordem_escala, expo_push_token |
-| remedios | id, paciente_id, nome, dose, foto_url, critico, estoque_doses |
-| horarios | id, remedio_id, hora, dias_semana |
-| doses | id, horario_id, previsto_em, confirmado_em, status (pendente, tomado, perdido) |
-| checkins | id, paciente_id, feito_em, febre, temperatura, sangramento, manchas, cansaco, humor, sono, notas, audio_url |
-| regras | id, paciente_id, gatilho, condicao (jsonb), nivel, ativa |
-| alertas | id, paciente_id, regra_id, nivel, motivo, criado_em, avisados[], visto_por, visto_em |
-| memoria_paciente | id, paciente_id, chave, valor |
-
-O app do idoso faz login uma vez por QR code gerado no app da família (vincula o aparelho ao paciente).
+- Português do Brasil. Letra mínima de 20, alto contraste, botões de no mínimo 64 px.
+- Nenhum menu, nenhuma configuração, nenhum gesto de deslizar (a exceção é "Minha privacidade", exigida pela LGPD). Tudo o mais é configurado pelo app da família.
+- Toda resposta da Lia sai em voz e em texto grande.
 
 ## Regras de alerta
 
-**As regras são código determinístico no servidor, nunca decididas pelo LLM.** O LLM só transforma a fala em dados estruturados. Se a IA cair, alarmes e alertas por silêncio continuam funcionando. Na dúvida, a regra sobe de nível.
+**As regras são código determinístico no servidor, nunca decididas pelo LLM.** O LLM só transforma a fala em dados. Se a IA cair, alarmes, check-in com rostinhos, "Preciso de ajuda" e alertas por silêncio continuam. Na dúvida, a regra sobe de nível. Toda regra tem teste.
 
-Níveis: vermelho (emergência: todo o grupo na hora), laranja (alerta crítico: responsável principal; se ele não agir em `escalada_min`, padrão 15 min, todo o grupo de uma vez), amarelo (resumo diário), informativo (só histórico).
-
-Regras gerais:
-- Botão "Preciso de ajuda" → vermelho.
-- Dose sem confirmação em `tolerancia_dose_min` (padrão 30 min) → laranja (gatilho `dose.nao_confirmada`; o remédio crítico não muda mais o nível).
-- Check-in sem resposta em `tolerancia_checkin_min` (padrão 15 min) depois do horário (padrão 08:00) → laranja.
-- Os três tempos ficam em `pacientes` (1 a 240 min) e são lidos com `temposDoPaciente` (`packages/regras/src/tempos.ts`). Modo demonstração (Ajustes da família) = tudo em 1 minuto. `verificar-doses` roda a cada minuto.
-- Nenhuma interação com o app em 24 h → vermelho.
-- Queda, dor no peito ou falta de ar relatadas → vermelho.
-- Humor baixo 3 dias seguidos → amarelo. Estoque abaixo de 5 dias → amarelo.
-
-Modelo leucemia (limites a validar com o hematologista; devem ser configuráveis por paciente):
-- Febre (temperatura ≥ limite configurado, padrão 37,8 °C) ou relato de febre/calafrio → vermelho.
-- Sangramento (gengiva, nariz, urina, fezes) → vermelho.
-- Manchas roxas novas → laranja. Sinais de infecção → laranja.
-- Cansaço forte 3 dias seguidos → laranja. Falta de apetite ou náusea 2 dias seguidos → amarelo.
+- **Níveis:** vermelho (emergência: todo o grupo na hora); laranja (alerta crítico: o responsável; se ele não agir em `escalada_min`, todo o grupo de uma vez); amarelo (só no painel); informativo (só histórico).
+- **Tempos por paciente** (1 a 240 min, lidos com `temposDoPaciente` em `packages/regras/src/tempos.ts`): `tolerancia_dose_min` (padrão 30), `tolerancia_checkin_min` (15), `escalada_min` (15). "Modo demonstração" em Ajustes = tudo em 1 minuto.
+- **Gerais:** "Preciso de ajuda" → vermelho. Dose sem "Tomei" na tolerância → laranja (`dose.nao_confirmada`). Check-in sem resposta → laranja. Rostinho "Muito mal" → laranja (`geral.checkin_muito_mal`). 24 h sem usar o app → vermelho. Queda, dor no peito ou falta de ar → vermelho. A Lia não entendeu 3 vezes → laranja. Humor baixo 3 dias, estoque baixo → amarelo.
+- **Leucemia** (limites a validar com o hematologista; febre configurável, padrão 37,8 °C): febre/calafrio ou sangramento → vermelho; manchas roxas, sinais de infecção, cansaço forte 3 dias → laranja; apetite baixo ou náusea 2 dias → amarelo.
+- **Resolvem sozinhos** (gatilhos no banco): o "Tomei" resolve o alerta da dose; o check-in resolve o "sem resposta". "Reenviar lembrete" reinicia a contagem da escalada.
+- **Consentimento manda em quem é avisado:** sem "mostrar para a família", só o responsável recebe alertas, inclusive emergências (`quemPodeSerAvisado` em `_shared/escala.ts`, a mesma regra de `ve_saude` no banco).
 
 ## Agente (Edge Function `agente`)
 
-Ferramentas do MVP: `confirmar_remedio`, `registrar_checkin`, `pedir_ajuda`, `proximos_compromissos`.
+- Ferramentas: `confirmar_remedio`, `registrar_checkin`, `pedir_ajuda`, `proximos_compromissos`.
+- Camadas: o LLM extrai sintomas; a rede de palavras-chave (`agente/sinais.ts`) é mesclada e o mais grave vence; com sinal de alerta e sem registro do LLM (ou com o LLM fora do ar), o servidor registra sozinho; toda resposta passa por `agente/revisao.ts`.
+- Limites (no prompt e cobertos por testes): nunca diagnostica nem sugere mudar, parar ou começar remédio; nunca diz que um sintoma "não é nada"; nunca pede senha, dados bancários ou códigos; frases curtas, uma pergunta por vez, tom carinhoso; entende "tô quentinha" = possível febre e "meio caída" = cansaço/humor baixo.
+- Sem o consentimento "conversar com a Lia", devolve uma resposta fixa e não chama o LLM.
 
-Limites obrigatórios no prompt de sistema e cobertos por testes:
-- Nunca diagnostica, nunca sugere mudar, parar ou começar remédio.
-- Nunca diz que um sintoma "não é nada"; sintomas da lista de alerta sempre viram registro.
-- Nunca pede senha, dados bancários ou códigos.
-- Frases curtas, uma pergunta por vez, tom carinhoso, sem jargão médico.
-- Entende linguagem coloquial: "tô quentinha" = possível febre; "meio caída" = cansaço/humor baixo.
-- Não entendeu três vezes seguidas → avisa a família.
+## Como as partes funcionam (onde está cada coisa)
 
-## Documentos e leitura de receita
+- **Instalar e primeiro acesso:** a família abre "Conectar o celular" (`apps/familia/src/app/vincular.tsx`): manda o link pelo WhatsApp e mostra o código de 4 números (30 min, uso único). No idoso: `TelaInstalar` → `PrimeiroAcesso` → `TelaConsentimento` → `PedirAvisos`. Banco: `gerar_codigo_vinculo`, `vincular_aparelho` (bloqueia depois de 5 erros em 15 min).
+- **Consentimento do idoso** (3 finalidades: `registro`, necessária; `familia`; `lia`): `packages/cliente/src/consentimento.ts`, `registrar_consentimento`, histórico em `consentimentos_historico`, gatilho `_so_o_idoso_consente`. `ve_saude(paciente)` = responsável sempre, acompanhantes só com `familia`; vale nas políticas de remédios, horários, regras, memória, doses, check-ins, alertas, documentos, consultas e fotos.
+- **Minha privacidade** (idoso): muda as permissões e mostra "Quem acompanha você" (`grupo_do_idoso`, `idoso_tirar_do_grupo`; tirar o responsável passa o papel ao próximo; a única pessoa não sai).
+- **Termos do familiar:** `packages/cliente/src/termos.ts` (`VERSAO_TERMOS`: mudou o texto, troque a versão). Criar conta exige o aceite; contas antigas aceitam uma vez. Banco: `termos_aceitos`, `aceitar_termos`.
+- **Grupo de cuidado:** papéis `principal` (responsável) e `apoio` (acompanhante); convites de 6 caracteres; só o responsável muda a rotina de remédios (gatilho `_so_responsavel_muda_remedios`).
+- **Check-in diário:** `pacientes.horario_checkin` (padrão 08:00; null desliga). Idoso: `TelaCheckin` com 6 rostinhos antes de tudo; 1–3 a Lia agradece, 4–6 a Lia entra na conversa. Grava pela Edge Function `registrar-checkin` ou, se falhar, por `registrar_rostinho`. Família: `CartaoUltimoCheckin` mostra o rostinho do dia (`checkinDoPainel`).
+- **Hora do remédio:** `apps/idoso/src/components/alarme.tsx` (foto da caixa ou desenho do comprimido, "Tomei", "Lembrar em 10 minutos", "Ouvir de novo"). Cor e formato em `packages/cliente/src/comprimido.ts`; fotos no bucket privado `remedios` (`<paciente_id>/caixa-...`; só o responsável envia). Adiar não é tomar: a família continua sendo avisada na tolerância. Na web, o alarme adiado só volta com o Cuida aberto.
+- **Alertas da família:** `apps/familia/src/components/tela-alerta.tsx` (o que aconteceu, quem foi avisado, quando o grupo será avisado, "Reenviar lembrete" pela Edge Function `reenviar-lembrete`, "Ligar", "Já falei com..., está tudo bem").
+- **Consultas:** tabela `consultas`; família em `app/consultas.tsx` e `CartaoProximaConsulta` no painel; idoso vê a próxima em até 7 dias. Lembretes ao idoso no dia anterior (a partir das 10h) e 3 horas antes (`consultasParaLembrar` em `_shared/lembretes.ts`).
+- **Documentos e receitas:** tabela `documentos` e bucket privado `documentos`. A Edge Function `ler-receita` só transcreve e sugere (`_shared/receita.ts`); **nunca cria alarmes**. A família confere em "Confira a receita" e `criar_alarmes_da_receita` cria só os itens conferidos. Exames e relatórios só são guardados.
+- **"Preciso de ajuda":** Edge Function `pedir-ajuda` (grava por `pedir_ajuda()` e manda push); se falhar, chama `pedir_ajuda()` direto; sem internet, a tela oferece o SAMU (192) e não diz "família avisada".
+- **`verificar-doses`** (pg_cron, a cada minuto; só aceita chave de servidor, `_shared/autorizacao.ts`): gera as doses, cria os alertas de dose e de check-in sem resposta, faz a escalada, o alerta de 24 h de silêncio e manda os lembretes por web push (remédio, check-in e consultas).
+- **PWA:** cada app tem `public/` com `manifest.webmanifest`, ícones e `sw.js` (o mesmo nos dois; ao mudar, troque `VERSAO` e copie para os dois).
 
-- Tabela `documentos` (tipo `receita` | `exame` | `relatorio`) e bucket privado `documentos` no Storage, com arquivos em `<paciente_id>/<arquivo>`; só cuidadores do paciente leem e enviam.
-- Edge Function `ler-receita`: recebe `{ documento_id }` com o token do cuidador, lê a imagem com a API da Anthropic (visão) e grava a leitura em `documentos.leitura` com status `aguardando_conferencia`. **Nunca cria alarmes.** A normalização (horários sugeridos, itens que precisam de revisão) é lógica pura em `_shared/receita.ts`, com testes.
-- A família confere e edita na tela "Confira a receita"; ao confirmar, o app chama `criar_alarmes_da_receita(p_documento, p_itens)`, que cria `remedios` e `horarios` só dos itens enviados e marca o documento como `conferida`.
-- Na dúvida, o item fica marcado "Precisa de você" e não entra nos alarmes até a família definir os horários.
+## Supabase: operação
 
-## Cronograma (entrega no Hack Brasil em 30/11/2026, 23:59)
+- Segredos das Edge Functions: `LLM_API_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a pública também está em `packages/cliente/src/notificacoes.ts`; trocar uma exige trocar a outra). O Vault guarda `project_url` e `service_role_key` (a chave secreta nova `sb_secret_...`) para o agendamento.
+- Publicar Edge Functions **com os caminhos do repositório** (elas importam `packages/regras`). Quem usa `_shared/alertar.ts`: `verificar-doses`, `pedir-ajuda`, `agente` e `registrar-checkin`; ao mudar `alertar.ts` ou `escala.ts`, publique as quatro. Só a `verificar-doses` tem a verificação de JWT desligada.
+- Conferir o agendamento: `select status_code, content from net._http_response order by created desc limit 3;`.
+- Testes do banco: Postgres 16 local com um esboço de `auth`/`storage`, todas as migrations e `supabase/seed.sql`, depois cada `supabase/tests/*_manual.sql` (cada linha deve sair `t`; blocos "deve dar erro" falham de propósito).
 
-| Datas | Entrega |
-| --- | --- |
-| 16–17/11 | Repositório público novo, Supabase, monorepo Expo |
-| 18–21/11 | Cadastro da família, remédios, alarme com "Tomei", aviso de dose perdida |
-| 22–25/11 | Check-in por voz, agente, regras de alerta com testes, push para a família |
-| 26–27/11 | Botão de ajuda, versão web publicada (Vercel), paciente sintética no banco |
-| 28/11 | Vídeo de até 3 minutos e README |
-| 29/11 | Folga para bugs |
-| 30/11 | Envio pela manhã |
+## Demonstração
 
-Fluxo que a demo precisa mostrar: alarme → "Tomei" → check-in dizendo "tô quentinha" → alerta vermelho no app da família.
-
-Se apertar, cortar primeiro o alerta por silêncio de 24 h e o painel do dia completo.
+- Conta dos jurados: `jurados@example.com` (senha só no formulário de envio). `supabase/demo/preparar_demo.sql` apaga e recria a "Dona Maria" dessa conta (remédios, uma semana de histórico, uma consulta, modo demonstração, celular desconectado). Rode antes de gravar e antes da avaliação: sem celular conectado, cada remédio vencido vira um alerta.
+- Roteiro do vídeo e passo a passo dos jurados: `docs/demo.md`. Antes de gravar, desligue ou mantenha o modo demonstração de propósito.
 
 ## Regras do Hack Brasil (obrigatórias)
 
-- **Repositório novo e público**, criado depois de 04/11/2026 às 21h, com todos os commits depois disso. Não copiar código privado anterior ao evento. Código open source público pode ser usado, citando a origem na mensagem do commit.
-- **Demo web obrigatória:** os jurados não instalam nada. Os dois apps precisam rodar no navegador (Expo web) e ficar publicados (Vercel) até o fim da avaliação. Funções só nativas (alarme em tela cheia, agenda) devem degradar com elegância na web: mostrar o alarme como modal na própria página.
-- **Dados sintéticos:** projetos de saúde só podem usar dados fictícios. Criar um seed com uma paciente fictícia (por exemplo, "Dona Maria", 78 anos, leucemia), remédios, check-ins e alertas de exemplo. Nunca dados reais no repositório, nos logs ou no vídeo.
-- **Sem segredos no repositório:** chaves do Supabase (service role), do LLM e da transcrição só em variáveis de ambiente. `.env` no `.gitignore` e um `.env.example` com os nomes das variáveis. O app só usa a chave anon do Supabase.
-- **Congelamento:** nenhum commit depois de 30/11 às 23:59 até a final.
-- **README** com: problema, como rodar, link da demo, link do vídeo, arquitetura e como testar as regras de alerta.
-- Repositório público pelo menos até 15/12/2026.
+- Repositório novo e público (até pelo menos 15/12/2026), criado depois de 04/11/2026 às 21h. Código open source de terceiros só citando a origem no commit.
+- **Demo web obrigatória:** os jurados não instalam nada; os dois apps rodam no navegador e ficam publicados até o fim da avaliação.
+- **Dados sintéticos:** só dados fictícios no repositório, nos logs, nos testes e no vídeo.
+- **Sem segredos no repositório:** chaves só em variáveis de ambiente e nos segredos do Supabase; `.env` no `.gitignore` e `.env.example` só com os nomes. Os apps usam só a chave anon.
+- README com problema, como rodar, link da demo, link do vídeo, arquitetura e como testar as regras de alerta.
+- **Entrega até 30/11/2026, 23:59. Congelamento:** nenhum commit depois disso até a final.
 
-## Estado atual (etapas 18–21/11 e 22–25/11 concluídas; 26–27/11 em andamento)
+## Falta (escolha do dono)
 
-Pronto e testado:
-- `packages/regras`: motor de regras de alerta em TypeScript puro, sem dependências, com 36 testes. Use estas funções nas Edge Functions; não reimplemente as regras.
-- `packages/cliente`: cliente Supabase (só chave anon), tipos das tabelas e utilitários de doses (usam `avaliarDose`), com testes.
-- `supabase/migrations`: esquema com RLS; `criar_paciente`, `gerar_codigo_vinculo`, `vincular_aparelho`, `registrar_interacao`, `gerar_doses_dia`, `gerar_doses_hoje`, `confirmar_dose`; realtime de alertas/doses; pg_cron (URL e chave no Vault). Validado em Postgres 16 com `supabase/tests/rls_manual.sql` e `doses_manual.sql`.
-- `supabase/functions/verificar-doses`: alerta de dose não confirmada e escalada laranja com os tempos de cada paciente (Etapa 1; antes: realarme aos 30 min e alerta aos 60), e push. Lógica pura em `_shared/` com testes em Node (`npm test`). `_shared/alertar.ts` (`criarEAvisar`) deve ser reutilizado pelas próximas funções.
-- `supabase/functions/verificar-doses` também cria o alerta vermelho de silêncio de 24 h (`_shared/silencio.ts`, usa `avaliarSilencio`).
-- `supabase/functions/agente`: conversa com a Lia (API da Anthropic, segredo `LLM_API_KEY`). Entrada `POST { texto, historico?: [{ papel: 'idoso' | 'lia', texto }] }` com o token do aparelho do idoso; saída `{ resposta, alertas }`. Usa `avaliarCheckin` + `criarEAvisar`, rede de palavras-chave (`agente/sinais.ts`) mesclada ao LLM, registro automático se o LLM falhar e revisão das respostas (`agente/revisao.ts`). `confirmar_remedio` chama `confirmar_dose` com o token do idoso. Três pedidos de repetição seguidos da Lia geram alerta laranja (`agente/entendimento.ts` + `avaliarNaoEntendeu`).
-- `apps/familia`: login por e-mail, cadastro do paciente com consentimento, remédios/horários, QR de vínculo, painel do dia com alertas em tempo real.
-- `apps/idoso`: login anônimo + vínculo por código/QR, tela única, alarme em tela cheia com "Tomei" e voz (expo-speech), alarmes locais no celular; na web o alarme é um modal.
-- `apps/idoso` (22–25/11): botão "Falar com a Lia"; transcrição no aparelho (expo-speech-recognition, prefere on-device; na web, Web Speech API; sem reconhecimento, campo de texto grande); chama a Edge Function `agente` com `{ texto, historico }` (últimas 12 falas) e mostra/fala a resposta. Lógica pura em `packages/cliente/src/conversa.ts`, com testes.
-- `npm test` roda todos os testes; `npm run typecheck` checa os dois apps.
-
-- Check-in diário (22–25/11): `pacientes.horario_checkin` (padrão 09:00, null desliga). `situacaoDoCheckin` em `packages/regras/src/checkin.ts` decide as tentativas (no horário e 30 min depois) e o alerta laranja de "sem resposta" 1 h depois (`avaliarCheckinSemResposta`); `verificar-doses` cria o alerta uma vez por dia (`_shared/checkin.ts`). No `apps/idoso`, a Lia puxa a conversa no horário (frase guardada no histórico do agente), o botão vira "Responder à Lia" e há lembretes locais no celular; o alarme de remédio tem prioridade. No `apps/familia`, cartão "Check-in diário" (horário editável, situação de hoje, resumo do último check-in).
-- Alerta vermelho no `apps/familia`: faixa vermelha no topo do painel, som (web) ou vibração (celular) na chegada e título da aba piscando até "Vi, estou cuidando".
-
-- Documentos (16/11): migration `20261123120000_documentos.sql` (tabela `documentos`, bucket privado `documentos`, `criar_alarmes_da_receita`, `remedios.termina_em` respeitado na geração de doses), validada com `supabase/tests/documentos_manual.sql`. Edge Function `ler-receita` com normalização em `_shared/receita.ts` (18 testes). No `apps/familia`: telas `app/documentos/index.tsx` (abas Receitas/Exames/Relatórios), `adicionar.tsx` (foto pela câmera com expo-image-picker ou arquivo/PDF com expo-document-picker → bucket `documentos` em `<paciente_id>/<arquivo>` → linha em `documentos`) e `receita.tsx` (chama `ler-receita`, itens `precisa_revisao` ficam "Precisa de você" até a família definir horários; "Criar N alarmes" chama `criar_alarmes_da_receita` só com os conferidos). Item Documentos na barra de navegação (5 ícones). Supabase em `lib/documentos.ts`; lógica pura em `packages/cliente/src/documentos.ts`, com testes.
-
-- Etapa 26–27/11 (parte feita em 16/11): botão "Preciso de ajuda" no `apps/idoso` (fim do início). Chama a Edge Function `pedir-ajuda` (grava pelo banco e manda push); se falhar, chama direto a função SQL `pedir_ajuda()` (migration `20261124120000_pedido_de_ajuda.sql`: vermelho para todo o círculo, conta como interação, toques em 2 min não duplicam); se tudo falhar, a tela oferece o SAMU (192) e não diz "família avisada". Lógica em `packages/cliente/src/ajuda.ts`; `packages/regras/test/ajuda.test.ts` confere que a migration usa o mesmo alerta de `pedidoDeAjuda()`; teste do banco em `supabase/tests/ajuda_manual.sql`. Seed com uma semana de doses, check-ins e alertas; "hoje" no seed é o dia de Brasília. `apps/*/vercel.json` prontos (passo a passo no README).
-
-- Supabase hospedado (16/11): projeto `cuida-app` (ref `rumwnbcefunxrybszrry`, sa-east-1) criado pelo conector, com as 6 migrations, o seed, `project_url` no Vault e as 4 Edge Functions publicadas (deploy com os caminhos do repositório, para os imports de `packages/regras` resolverem). Teste no banco hospedado, numa transação desfeita: vínculo por código, "Tomei", pedido de ajuda vermelho para a família, idosa sem editar remédios, estranho sem ver nada e anon bloqueado. A migration `20261125120000_funcoes_de_acesso_sem_anon.sql` atende ao aviso de segurança do Supabase (funções de acesso não executáveis por anon). Os demais avisos são intencionais (funções SECURITY DEFINER checam permissão por dentro; `codigos_vinculo` sem políticas). Em 17/11 o usuário ligou o login anônimo, cadastrou `LLM_API_KEY` e guardou a chave de servidor no Vault. Neste projeto as Edge Functions recebem só chaves no formato novo (`SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_SECRET_KEYS` são `sb_secret_...`), então o Vault guarda a chave secreta nova com o nome `service_role_key`. A `verificar-doses` aceita a service_role antiga ou a chave secreta nova, no `Authorization` ou no `apikey` (`_shared/autorizacao.ts`, com testes), e registra no log só o tipo de chave quando recusa. O agendamento respondeu 200 e criou os alertas das doses não confirmadas. `pedir-ajuda`, `agente` e `ler-receita` ainda não foram chamadas com token real (a API do projeto não é acessível do ambiente da nuvem).
-
-- 17/11: conta da família criada no painel do Supabase (Authentication → Users, já confirmada) e ligada à paciente fictícia como cuidador principal; os alertas de dose acumulados sem aparelho vinculado foram marcados como vistos. Enquanto nenhum aparelho confirmar "Tomei", a `verificar-doses` cria um alerta por dose: limpar ou recriar o seed antes de gravar o vídeo. Na Vercel, projeto `cuida-app-idoso` criado (Root Directory `apps/idoso`, preset Other, variáveis `EXPO_PUBLIC_*`); falta o `cuida-app-familia` e, depois, o Site URL e as Redirect URLs em Authentication → URL Configuration do Supabase. Para os jurados, criar uma conta de demonstração separada com e-mail que ninguém receba (por exemplo, `@example.com`).
-
-- Condições de saúde (17/11): no cadastro e em Ajustes do `apps/familia`, pergunta "Possui alguma doença?" e lista em dois grupos (`packages/cliente/src/condicoes.ts`): com alertas automáticos (só `leucemia`) e só registro (`diabetes`, `hipertensao`, `doenca_cardiaca`, `doenca_pulmonar`). Só códigos do catálogo vão para `pacientes.condicoes`; o texto livre vai para `pacientes.outras_condicoes` (migration `20261126120000_outras_condicoes.sql`, até 300 caracteres) e nunca gera alerta. Teste em `packages/cliente/test/condicoes.test.ts` confere que o código do catálogo liga `leucemia.febre` no motor; banco em `supabase/tests/condicoes_manual.sql`. Ao criar um modelo de alertas para outra condição, mover a condição para o grupo com alertas (campo `alertas` no catálogo). Componentes `Opcao`/`Escolha` em `components/opcao.tsx`. Os dois apps estão publicados: https://cuida-app-familia.vercel.app e https://cuida-app-idoso.vercel.app.
-
-Próximo passo: publicar os dois apps na Vercel, `eas init` para o push da família. `npm run typecheck` e `npm test` (175 testes) passaram em 16/11 depois da etapa 26–27/11 (182 testes em 17/11, depois das condições de saúde); o `npm install` avisa de 3 vulnerabilidades moderadas e do pacote obsoleto `text-encoding` (não rodar `npm audit fix --force`, que troca versões principais).
-
-- Design "Manhã Clara" aplicado nos dois apps: temas em `apps/*/src/lib/tema.ts` importam `docs/design/tokens.json` (não duplique cores); fontes Atkinson Hyperlegible e Outfit via `@expo-google-fonts` (carregadas no `_layout`); ícones de traço em `components/icones.tsx` (react-native-svg). Idoso: `Texto`/`Destaque` em `components/ui.tsx` garantem 20 pt; telas de início, conversa (`components/conversa.tsx`), alarme (tela cheia no celular, modal na web) e "Sua família foi avisada" (aparece quando o agente registra pedido de ajuda). Família: painel do dia com cartão vermelho, tela do alerta, barra de navegação flutuante (Hoje, Remédios, Documentos, Alertas, Ajustes) e tela Ajustes (horário do check-in, vincular, sair). `packages/cliente/test/design.test.ts` confere 20 pt, toques de 64 e contraste 4,5:1 dos tokens.
-- Ainda sem dados para partes das referências: nomes e telefones do círculo no idoso ("Ligar para o Lucas"), "Quem foi avisado" por pessoa e botões de ligar no alerta da família.
-
-- PWA (Etapa 2 do novo plano): cada app tem `public/` com `index.html` (modelo do Expo: manifest, metas do iPhone, fundo creme), `manifest.webmanifest`, `icones/` (192, 512, maskable, apple-touch 180; fonte em `icone.svg`: idoso com fundo creme, família com fundo verde) e `sw.js` (casca offline; nunca guarda chamadas a outros sites; o mesmo arquivo nos dois apps). O `_layout` registra o service worker só no navegador e em produção (`registrarServiceWorker`, `estaInstalado` em `packages/cliente/src/pwa.ts`). `vercel.json` serve `/sw.js` sem cache. `packages/cliente/test/pwa.test.ts` confere manifest, ícones e service worker. Ao mudar o `sw.js`, troque `VERSAO` (apaga o cache antigo) e copie para os dois apps. Web push entra no mesmo `sw.js` na próxima etapa.
-
-- Web push (Etapa 3 do novo plano): envio em `supabase/functions/_shared/webpush.ts` só com WebCrypto (RFC 8291 aes128gcm + VAPID RFC 8292; teste com o exemplo oficial da RFC). Segredos das Edge Functions: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (o "d", base64url) e `VAPID_SUBJECT`; a pública também está em `packages/cliente/src/notificacoes.ts` (`CHAVE_PUBLICA_VAPID`; trocar uma exige trocar a outra). Tabela `inscricoes_push` (migration `20261128120000_web_push.sql`; grava só por `salvar_inscricao_push`, cada um vê as suas; teste em `supabase/tests/web_push_manual.sql`). `_shared/notificar.ts` (`notificarUsuarios`, apaga inscrições expiradas) e `_shared/lembretes.ts` (o que vira notificação, com testes). `avisarFamilia` em `alertar.ts` manda web push + push do Expo para todo alerta (usado por `criarEAvisar`, escalada e `pedir-ajuda`). `verificar-doses` manda ao idoso o lembrete do remédio no horário (`doses.lembrete_em`, até a tolerância) e do check-in (`pacientes.lembrete_checkin_em`, um por dia). `sw.js` (versão `cuida-v2`) mostra a notificação e abre o app ao tocar. Apps: `src/lib/notificacoes.ts` (`useNotificacoes`); família: `CartaoNotificacoes` em Ajustes e no painel enquanto faltar; idoso: `AvisosNotificacao` (Variação E) no início. iPhone: só com o app na Tela de Início, e a permissão só a partir de um toque. `npm run typecheck` também checa as Edge Functions (`supabase/functions/tsconfig.checagem.json`). Ao publicar uma função que usa `alertar.ts`, publique as três (`verificar-doses`, `pedir-ajuda`, `agente`).
-
-- Tela do alerta (Etapa 4 do novo plano): `apps/familia/src/components/tela-alerta.tsx` (Variação E) com o que aconteceu, quem foi avisado e quando o grupo será avisado (`situacaoDaEscalada` em `packages/cliente/src/alertas.ts`), "Reenviar lembrete" (Edge Function `reenviar-lembrete`: só cuidador, manda ao celular do idoso o lembrete certo e grava `alertas.acao_em`, que reinicia a contagem da escalada), "Ligar para o idoso" (`pacientes.telefone`, editável em Ajustes) e "Já falei com..., está tudo bem" (`resolucao = 'familia'`). Migration `20261129120000_acoes_do_alerta.sql`: `alertas.dose_id`, `acao_em`, `resolucao` e gatilhos que resolvem o alerta sozinho quando o idoso confirma a dose (`tomou`) ou faz o check-in (`checkin`), para o grupo não ser avisado à toa; teste em `supabase/tests/acoes_alerta_manual.sql`. `verificar-doses` grava `dose_id` nos alertas de dose e conta a escalada a partir de `acao_em` (`inicioDaEscalada`). Ícones novos em `@cuida/visual`: `IconeTelefone`, `IconeSino`, `IconeConfirmado`, `IconeVoltar`.
-
-- Grupo de cuidado (Etapa 5 do novo plano): papéis `principal` (responsável) e `apoio` (acompanhante). Migration `20261130120000_grupo_de_cuidado.sql`: tabela `convites` (código de 6 caracteres sem 0/O/1/I, uso único, 7 dias) e funções `criar_convite` (só responsável), `aceitar_convite` (conta de e-mail, não o aparelho anônimo; entra como acompanhante no fim da escala), `passar_responsabilidade` e `sair_ou_remover_do_grupo` (o responsável não sai sem passar o papel). Gatilho `_so_responsavel_muda_remedios` em `remedios` e `horarios`: só o responsável muda a rotina de remédios por qualquer caminho (inclusive a receita); o servidor, o aparelho do idoso e a baixa de estoque do "Tomei" continuam permitidos. Teste em `supabase/tests/grupo_manual.sql`. No `apps/familia`: `app/grupo.tsx` (Variação E: quem acompanha, convidar, tornar responsável, remover, sair, seu nome no grupo), `app/convite.tsx` (link `/convite?codigo=...`; sem conta, o código fica guardado e o `_layout` volta para ele depois do login), atalho em Ajustes, "Tenho um código de convite" no primeiro acesso e Remédios só de leitura para o acompanhante. `usePaciente()` agora traz o `papel`. Lógica pura em `packages/cliente/src/grupo.ts`, com testes.
-
-- Instalar + primeiro acesso (Etapa 6 do novo plano): a família abre "Conectar o celular" (`apps/familia/src/app/vincular.tsx`, Variação E): 1) "Enviar link por WhatsApp ou SMS" (`mensagemDeInstalacao`, link `LINK_DO_APP_DO_IDOSO`); 2) "Mostrar o código" (4 números, vale 30 min, uso único, só um ativo por paciente; a tela confere a cada 5 s e mostra "Pronto!" quando o celular conecta); "Ligar para..." se houver telefone (o cadastro agora pede o telefone e abre essa tela no fim). No `apps/idoso`, sem vínculo: `TelaInstalar` (`components/instalar.tsx`: passos para iPhone, Android com botão de instalar quando o navegador oferece, e aviso para abrir no Safari/Chrome quando o link abriu dentro do WhatsApp/Instagram etc.; "Continuar sem instalar" fica guardado) → `PrimeiroAcesso` (código de 4 números) → `PedirAvisos` (uma vez). Lógica pura em `packages/cliente/src/instalacao.ts` (`reconhecerNavegador`, `precisaInstalar`, `lerCodigoDeAcesso`), com testes; `apps/idoso/src/lib/instalacao.ts` guarda o `beforeinstallprompt` (`ouvirInstalacao` no `_layout`). O QR saiu do app do idoso. Migration `20261130130000_primeiro_acesso.sql`: `gerar_codigo_vinculo` de 4 números/30 min e `vincular_aparelho` devolve null para código errado e bloqueia depois de 5 erros em 15 min (tabela `tentativas_vinculo`); teste em `supabase/tests/primeiro_acesso_manual.sql`. O app novo e a migration precisam entrar juntos.
-
-- Check-in com rostinhos (Etapa 7 do novo plano): no `apps/idoso`, `TelaCheckin` (`components/checkin.tsx`, Variação E, `GradeRostinhos`) aparece antes de tudo depois do horário do check-in, até o idoso responder (o alarme fica por cima; "Preciso de ajuda" fica no fim). O toque grava pela Edge Function `registrar-checkin` (push) ou, se ela falhar, direto por `registrar_rostinho(p_nivel)` (`registrarRostinho` em `packages/cliente/src/rostinho.ts`). Níveis 1–3: a Lia agradece; 4–6: abre a conversa com a Lia (`respostaAoRostinho`, a frase fica no histórico do agente). Regra fixa `avaliarRostinho` (`packages/regras`): só "Muito mal" (6) gera alerta laranja `geral.checkin_muito_mal` para o responsável, com escalada; `rostinho.test.ts` confere que a migration usa o mesmo alerta. Migration `20261130140000_checkin_rostinhos.sql`: `checkins.nivel` (1–6) e `registrar_rostinho` (conta como interação, toques em 2 min não duplicam, resolve o "sem resposta" pelo gatilho existente); teste em `supabase/tests/rostinho_manual.sql`. Família: `checkinDoPainel` junta o rostinho e a conversa do mesmo dia; o cartão do check-in mostra `SeloRostinho` (novo em `@cuida/visual`).
-
-- Consentimento do idoso (Etapa 8 do novo plano): no `apps/idoso`, depois do código, `TelaConsentimento` (`components/consentimento.tsx`, Variação E) com as 3 finalidades de `FINALIDADES` (`packages/cliente/src/consentimento.ts`): `registro` (guardar como está e os remédios; necessária: sem ela a tela explica e pede de novo), `familia` (mostrar para o grupo) e `lia` (conversar com a IA); nada vem marcado. A mesma tela é "Minha privacidade" (link no fim do início) para mudar de ideia. Sem `lia`: o botão da Lia some, os rostinhos 4–6 não abrem conversa e a Edge Function `agente` devolve uma resposta fixa sem chamar o LLM. Migration `20261130150000_consentimento_do_idoso.sql`: colunas `pacientes.consente_registro_em`, `consente_familia_em`, `consente_lia_em`, `consentimento_respondido_em`; histórico `consentimentos_historico`; `registrar_consentimento` (só o aparelho do idoso); gatilho `_so_o_idoso_consente` (a família não muda essas colunas); `ve_saude(paciente)` = responsável sempre, acompanhantes só com `familia`, usada nas políticas de remédios, horários, regras, memória, doses, check-ins, alertas e documentos (e no Storage); `registrar_rostinho` exige `registro`; `pedir_ajuda` grava como avisados só quem pode ver. Servidor: `carregarCuidadores` (`_shared/alertar.ts`) filtra com `quemPodeSerAvisado` (`_shared/escala.ts`): sem `familia`, só o responsável recebe alertas, inclusive emergências. Família: `CartaoConsentimento` (`components/consentimento.tsx`) no painel (aguardando ou grupo sem acesso) e lista completa em Grupo. Teste em `supabase/tests/consentimento_manual.sql`. Os termos do familiar e "tirar alguém do grupo" pelo idoso vieram depois (ver abaixo).
-
-- Hora do remédio (tela 7 do idoso, PRD): `apps/idoso/src/components/alarme.tsx` refeito na Variação E (Paisagem com o horário, foto da caixa ou `DesenhoComprimido` de `@cuida/visual`, descrição "Comprimido redondo branco", `BotaoPrincipal` "Tomei" de 90 px, "Lembrar em 10 minutos" e "Ouvir de novo"); a Lia fala também como é o comprimido (`comoFalarOComprimido`). Adiar esconde o alarme por 10 min (`useAdiamentos` em `apps/idoso/src/lib/adiamentos.ts`, guardado no aparelho; no celular agenda um alarme local `agendarAdiado`); a família continua sendo avisada pela tolerância da dose, porque adiar não é tomar. Catálogo de cores e formatos em `packages/cliente/src/comprimido.ts` (com testes que conferem a migration). Família: `EscolhaAparencia` (`components/aparencia-remedio.tsx`, formato e cor em listas suspensas `Suspensa`) no cadastro e em "Cor, formato e foto da caixa" de cada remédio; foto pela câmera ou galeria (`lib/remedios.ts`). Migration `20261130160000_hora_do_remedio.sql`: `remedios.cor` e `remedios.formato` (códigos do catálogo) e bucket privado `remedios` (`<paciente_id>/caixa-...`; veem o idoso e quem tem `ve_saude`; envia e apaga só o responsável); `remedios.foto_url` guarda o caminho e os apps pedem link temporário. Teste em `supabase/tests/hora_do_remedio_manual.sql`. `SELECT_DOSE` lê `cor` e `formato`: a migration precisa estar no banco antes de publicar os apps.
-
-- Termos do familiar (PRD, "Dados e LGPD", item 2): texto e versão em `packages/cliente/src/termos.ts` (`TERMOS_FAMILIA`, `VERSAO_TERMOS`; mudou o texto, troque a versão e todos aceitam de novo). Criar conta (`app/entrar.tsx`) exige marcar "Li e aceito os termos" (link para `/termos`, página aberta); a versão vai em `user_metadata.termos_versao` e o aceite é gravado por `aceitar_termos` (na hora, ou no primeiro login se a conta precisar confirmar o e-mail). Contas antigas veem `AceitarTermos` (`components/termos.tsx`) uma vez, pelo `_layout` (`useTermos` em `lib/termos.ts`; sem internet, não trava). Migration `20261130170000_termos_da_familia.sql`: tabela `termos_aceitos` (usuário, versão, hora do servidor; cada um vê os seus) e `aceitar_termos` (recusa o aparelho anônimo do idoso). Teste em `supabase/tests/termos_manual.sql`. Ainda não existe "apagar a conta" no app.
-
-- Idoso e o grupo (PRD, "Dados e LGPD", item 3): em "Minha privacidade", `QuemAcompanha` (`apps/idoso/src/components/quem-acompanha.tsx`) mostra quem acompanha (só nome e papel) e "Tirar do grupo", com confirmação (`confirmacaoTirarDoGrupo` em `packages/cliente/src/grupo.ts`). Migration `20261130180000_idoso_e_o_grupo.sql`: `grupo_do_idoso()` e `idoso_tirar_do_grupo(p_usuario)`, só para o aparelho do idoso; tirar o responsável passa o papel para o próximo da escala; a única pessoa do grupo não sai. Teste em `supabase/tests/idoso_grupo_manual.sql`.
-
-- Consultas (PRD, seção 7): tabela `consultas` (migration `20261130190000_consultas.sql`; veem e cadastram quem tem `ve_saude`, o idoso só lê; remarcar zera os lembretes; teste em `supabase/tests/consultas_manual.sql`). Lógica em `packages/cliente/src/consultas.ts` (`proximaConsulta`, `consultaPerto`, `quandoPorExtenso` "Amanhã às 14:00", `lerDataDaConsulta`, `instanteDaConsulta`). Família: `app/consultas.tsx` (Variação E: lista, nova consulta, apagar) e `CartaoProximaConsulta` no painel. Idoso: "Próxima consulta" no início quando faltar até 7 dias (`useProximaConsulta`). Lembretes ao idoso por web push na `verificar-doses` (`consultasParaLembrar` e `notificacaoDaConsulta` em `_shared/lembretes.ts`): no dia anterior a partir das 10h e 3 horas antes, uma vez cada. Ainda não: a Lia ler o pedido médico e sugerir a consulta.
-
-Observações: `npx expo install` precisa de `EXPO_OFFLINE=1` neste ambiente (api.expo.dev bloqueado). O push da família exige `eas init` (projectId).
-
-Os campos de `checkins` vão além da tabela resumida acima: incluem também calafrio, sinais_infeccao, apetite_baixo, nausea, queda, dor_no_peito, falta_de_ar e confuso. A migration é a fonte da verdade.
+- Link do vídeo no README.
+- A Lia ler o pedido médico e sugerir a consulta (PRD, seção 7).
+- "Apagar minha conta" no app (os termos ainda não prometem isso).
+- "Lembrar em 10 minutos" chegar como notificação com o app fechado (hoje é só no aparelho).
+- Refazer na Variação E as telas que ainda estão no visual anterior.
 
 ## Como trabalhar neste repositório
 
-- Construa em fatias pequenas de ponta a ponta e pare para testar antes da próxima.
-- Escreva testes para toda regra de alerta (febre, sangramento, dose perdida, silêncio).
-- Dados de saúde são sensíveis (LGPD) e o regulamento exige dados sintéticos: nada de dados reais em seeds, logs ou commits.
-- Antes de cada commit, confira que nenhuma chave ou `.env` entrou no diff.
-- Textos de interface em português do Brasil; código e nomes de tabelas como acima.
+- Fatias pequenas de ponta a ponta; teste antes da próxima. Lógica pura em `packages/*` ou `_shared/`, com testes (`npm test`); `npm run typecheck` checa os dois apps e as Edge Functions.
+- Para ver uma tela: `EXPO_OFFLINE=1` com variáveis falsas, `npx expo export --platform web`, servir `dist/` e fotografar com Playwright (simulando o banco quando precisar). `npx expo install` precisa de `EXPO_OFFLINE=1` neste ambiente.
+- Dados de saúde são sensíveis (LGPD): nada de dados reais em seeds, logs ou commits. Antes de cada commit, confira que nenhuma chave ou `.env` entrou no diff.
+- Textos de interface em português do Brasil, simples, como se falasse com a família; código e tabelas em português, como estão.
+- A tabela `checkins` tem mais campos do que os citados aqui; a migration é a fonte da verdade.
