@@ -15,9 +15,12 @@ import { PacienteProvider } from '@/lib/paciente';
 import { lerConvitePendente } from '@/lib/grupo';
 import { registrarPush } from '@/lib/push';
 import { SessaoProvider, useSessao } from '@/lib/sessao';
+import { AceitarTermos } from '@/components/termos';
+import { useTermos } from '@/lib/termos';
 
 function Rotas() {
   const { sessao, carregando } = useSessao();
+  const termos = useTermos(sessao);
 
   useEffect(() => {
     if (sessao) registrarPush(sessao.user.id).catch((e) => console.warn('Push:', e?.message ?? e));
@@ -31,13 +34,16 @@ function Rotas() {
     });
   }, [sessao]);
 
-  if (carregando) {
+  if (carregando || (sessao && termos.estado === 'carregando')) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: cores.fundo }}>
         <ActivityIndicator size="large" color={cores.primaria} />
       </View>
     );
   }
+
+  // Termos do familiar (docs/PRD.md, "Dados e LGPD"): uma vez por versão, antes de tudo.
+  if (sessao && termos.estado === 'falta') return <AceitarTermos aoAceitar={termos.aceitar} />;
 
   return (
     <Stack
@@ -64,6 +70,7 @@ function Rotas() {
         <Stack.Screen name="grupo" options={{ headerShown: false, title: 'Grupo de cuidado' }} />
       </Stack.Protected>
       <Stack.Screen name="convite" options={{ headerShown: false, title: 'Convite' }} />
+      <Stack.Screen name="termos" options={{ headerShown: false, title: 'Termos de uso e privacidade' }} />
     </Stack>
   );
 }

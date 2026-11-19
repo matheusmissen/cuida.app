@@ -1,6 +1,10 @@
+import { VERSAO_TERMOS } from '@cuida/cliente';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from 'react-native';
+import { Opcao } from '@/components/opcao';
 import { Botao, Campo, Cartao, cores, Erro, Texto } from '@/components/ui';
+import { aceitarTermos } from '@/lib/termos';
 import { supabase } from '@/lib/supabase';
 import { fontes, paleta } from '@/lib/tema';
 
@@ -8,6 +12,7 @@ export default function Entrar() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [modo, setModo] = useState<'entrar' | 'criar'>('entrar');
+  const [aceitouTermos, setAceitouTermos] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -19,11 +24,21 @@ export default function Entrar() {
       setErro('Informe um e-mail válido e uma senha com pelo menos 6 caracteres.');
       return;
     }
+    if (modo === 'criar' && !aceitouTermos) {
+      setErro('Para criar a conta, leia e aceite os termos de uso e privacidade.');
+      return;
+    }
     setEnviando(true);
     const { data, error } =
       modo === 'entrar'
         ? await supabase.auth.signInWithPassword({ email: email.trim(), password: senha })
-        : await supabase.auth.signUp({ email: email.trim(), password: senha });
+        : await supabase.auth.signUp({
+            email: email.trim(),
+            password: senha,
+            // Se a conta precisar confirmar o e-mail, o aceite é gravado no primeiro login (lib/termos.ts).
+            options: { data: { termos_versao: VERSAO_TERMOS } },
+          });
+    if (!error && modo === 'criar' && data.session) await aceitarTermos();
     setEnviando(false);
     if (error) {
       setErro(
@@ -60,6 +75,14 @@ export default function Entrar() {
             autoComplete={modo === 'entrar' ? 'current-password' : 'new-password'}
             onSubmitEditing={enviar}
           />
+          {modo === 'criar' && (
+            <>
+              <Opcao marcada={aceitouTermos} onPress={() => setAceitouTermos(!aceitouTermos)}>
+                Li e aceito os termos de uso e privacidade
+              </Opcao>
+              <Botao variante="texto" titulo="Ler os termos" onPress={() => router.push('/termos')} />
+            </>
+          )}
           <Erro mensagem={erro} />
           {aviso && <Text style={{ color: paleta.salvia.texto, fontSize: 15, fontFamily: fontes.texto }}>{aviso}</Text>}
           <Botao titulo={modo === 'entrar' ? 'Entrar' : 'Criar conta'} onPress={enviar} carregando={enviando} />
