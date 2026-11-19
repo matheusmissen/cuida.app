@@ -39,6 +39,7 @@ import { useInstalacao } from '@/lib/instalacao';
 import { useNotificacoes } from '@/lib/notificacoes';
 import { supabase } from '@/lib/supabase';
 import { alvos, cores, espacos, sombras, tamanhos } from '@/lib/tema';
+import { useAdiamentos } from '@/lib/adiamentos';
 import { useCheckin } from '@/lib/use-checkin';
 import { useConversa } from '@/lib/use-conversa';
 import { useDoses } from '@/lib/use-doses';
@@ -177,7 +178,9 @@ function TelaDoDia({
   const [checkinFeito, setCheckinFeito] = useState<string | null>(null); // chave do dia já respondido
   const ultimaFala = useUltimaFala();
 
-  const devidas = dosesDevidas(doses, agora);
+  const { adiada, adiarDose } = useAdiamentos();
+  // "Me lembre daqui a 10 minutos": o alarme adiado some e volta sozinho.
+  const devidas = dosesDevidas(doses, agora).filter((d) => !adiada(d.id, agora));
   const proxima = proximaDose(doses, agora);
   const fmtDia = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Sao_Paulo',
@@ -271,7 +274,7 @@ function TelaDoDia({
   );
 
   const alarme = devidas[0] && (
-    <Alarme dose={devidas[0]} apelido={apelido} agora={agora} tempos={tempos} onTomei={confirmar} />
+    <Alarme dose={devidas[0]} apelido={apelido} agora={agora} tempos={tempos} onTomei={confirmar} onAdiar={adiarDose} />
   );
 
   if (!iniciado) {

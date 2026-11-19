@@ -32,7 +32,7 @@ async function preparar(): Promise<boolean> {
   return preparado;
 }
 
-type Tipo = 'dose' | 'checkin';
+type Tipo = 'dose' | 'checkin' | 'adiado';
 
 /** Cancela só as notificações agendadas de um tipo (doses e check-in são reagendados separadamente). */
 async function cancelarTipo(tipo: Tipo): Promise<void> {
@@ -81,4 +81,20 @@ export async function agendarAlarmes(doses: DoseComRemedio[]): Promise<void> {
       });
     }
   }
+}
+
+/** "Me lembre daqui a 10 minutos": um alarme só, que não é apagado quando os alarmes das doses são refeitos. */
+export async function agendarAdiado(dose: DoseComRemedio, quando: Date): Promise<void> {
+  if (!(await preparar())) return;
+  const remedio = dose.horarios.remedios;
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Hora do remédio',
+      body: `${remedio.nome} — ${remedio.dose}. Abra e aperte "Tomei".`,
+      sound: 'default',
+      priority: Notifications.AndroidNotificationPriority.MAX,
+      data: { tipo: 'adiado', doseId: dose.id },
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: quando, channelId: 'alarmes' },
+  });
 }
