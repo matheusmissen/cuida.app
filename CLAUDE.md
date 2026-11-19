@@ -70,6 +70,7 @@ O objetivo do MVP é provar que **o idoso usa sozinho e a família fica sabendo 
 - **Consentimento do idoso** (3 finalidades: `registro`, necessária; `familia`; `lia`): `packages/cliente/src/consentimento.ts`, `registrar_consentimento`, histórico em `consentimentos_historico`, gatilho `_so_o_idoso_consente`. `ve_saude(paciente)` = responsável sempre, acompanhantes só com `familia`; vale nas políticas de remédios, horários, regras, memória, doses, check-ins, alertas, documentos, consultas e fotos.
 - **Minha privacidade** (idoso): muda as permissões e mostra "Quem acompanha você" (`grupo_do_idoso`, `idoso_tirar_do_grupo`; tirar o responsável passa o papel ao próximo; a única pessoa não sai).
 - **Termos do familiar:** `packages/cliente/src/termos.ts` (`VERSAO_TERMOS`: mudou o texto, troque a versão). Criar conta exige o aceite; contas antigas aceitam uma vez. Banco: `termos_aceitos`, `aceitar_termos`.
+- **Apagar minha conta** (família, Ajustes → Sua conta → `app/apagar-conta.tsx`): mostra o que acontece em cada grupo (`resumo_para_apagar_conta`, frases em `packages/cliente/src/conta.ts`) e pede a palavra APAGAR. A Edge Function `apagar-conta` chama `apagar_conta` (só o servidor): sai dos grupos, passa a responsabilidade à próxima pessoa e apaga os pacientes em que era a única (com os arquivos); por último apaga o usuário do Auth.
 - **Grupo de cuidado:** papéis `principal` (responsável) e `apoio` (acompanhante); convites de 6 caracteres; só o responsável muda a rotina de remédios (gatilho `_so_responsavel_muda_remedios`).
 - **Check-in diário:** `pacientes.horario_checkin` (padrão 08:00; null desliga). Idoso: `TelaCheckin` com 6 rostinhos antes de tudo; 1–3 a Lia agradece, 4–6 a Lia entra na conversa. Grava pela Edge Function `registrar-checkin` ou, se falhar, por `registrar_rostinho`. Família: `CartaoUltimoCheckin` mostra o rostinho do dia (`checkinDoPainel`).
 - **Hora do remédio:** `apps/idoso/src/components/alarme.tsx` (foto da caixa ou desenho do comprimido, "Tomei", "Lembrar em 10 minutos", "Ouvir de novo"). Cor e formato em `packages/cliente/src/comprimido.ts`; fotos no bucket privado `remedios` (`<paciente_id>/caixa-...`; só o responsável envia). Adiar não é tomar: a família continua sendo avisada na tolerância. O adiamento também vai ao servidor (`adiar_dose`, colunas `doses.adiada_ate`/`lembrete_adiado_em`) e a `verificar-doses` manda o lembrete de novo por web push, mesmo com o app fechado (`dosesAdiadasParaLembrar` em `_shared/lembretes.ts`).
@@ -83,7 +84,7 @@ O objetivo do MVP é provar que **o idoso usa sozinho e a família fica sabendo 
 ## Supabase: operação
 
 - Segredos das Edge Functions: `LLM_API_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a pública também está em `packages/cliente/src/notificacoes.ts`; trocar uma exige trocar a outra). O Vault guarda `project_url` e `service_role_key` (a chave secreta nova `sb_secret_...`) para o agendamento.
-- Publicar Edge Functions **com os caminhos do repositório** (elas importam `packages/regras`). Quem usa `_shared/alertar.ts`: `verificar-doses`, `pedir-ajuda`, `agente` e `registrar-checkin`; ao mudar `alertar.ts` ou `escala.ts`, publique as quatro. Só a `verificar-doses` tem a verificação de JWT desligada.
+- Publicar Edge Functions **com os caminhos do repositório** (elas importam `packages/regras`). Funções: `agente`, `verificar-doses`, `registrar-checkin`, `pedir-ajuda`, `reenviar-lembrete`, `ler-receita` e `apagar-conta`. Quem usa `_shared/alertar.ts`: `verificar-doses`, `pedir-ajuda`, `agente` e `registrar-checkin`; ao mudar `alertar.ts` ou `escala.ts`, publique as quatro. Só a `verificar-doses` tem a verificação de JWT desligada.
 - Conferir o agendamento: `select status_code, content from net._http_response order by created desc limit 3;`.
 - Testes do banco: Postgres 16 local com um esboço de `auth`/`storage`, todas as migrations e `supabase/seed.sql`, depois cada `supabase/tests/*_manual.sql` (cada linha deve sair `t`; blocos "deve dar erro" falham de propósito).
 
@@ -104,7 +105,6 @@ O objetivo do MVP é provar que **o idoso usa sozinho e a família fica sabendo 
 ## Falta (escolha do dono)
 
 - Link do vídeo no README.
-- "Apagar minha conta" no app (os termos ainda não prometem isso).
 
 ## Como trabalhar neste repositório
 

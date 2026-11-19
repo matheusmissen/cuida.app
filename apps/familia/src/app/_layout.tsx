@@ -64,6 +64,7 @@ function Rotas() {
         <Stack.Screen name="documentos/adicionar" options={{ headerShown: false, title: 'Adicionar documento' }} />
         <Stack.Screen name="documentos/receita" options={{ headerShown: false, title: 'Confira a receita' }} />
         <Stack.Screen name="documentos/pedido" options={{ headerShown: false, title: 'Confira o pedido' }} />
+        <Stack.Screen name="apagar-conta" options={{ headerShown: false, title: 'Apagar minha conta' }} />
         <Stack.Screen name="vincular" options={{ headerShown: false, title: 'Conectar o celular' }} />
         <Stack.Screen name="grupo" options={{ headerShown: false, title: 'Grupo de cuidado' }} />
         <Stack.Screen name="consultas" options={{ headerShown: false, title: 'Consultas' }} />

@@ -54,8 +54,12 @@ export default function Ajustes() {
             <Botao variante="secundario" titulo="Conectar o celular" onPress={() => router.push('/vincular')} />
           </Cartao>
         )}
-        <View style={{ height: 4 }} />
-        <Botao variante="texto" titulo="Sair" onPress={() => supabase.auth.signOut()} />
+        <Cartao>
+          <Titulo>Sua conta</Titulo>
+          <Texto suave>Sair desconecta só este aparelho. Apagar a conta apaga o seu e-mail e os seus dados.</Texto>
+          <Botao variante="secundario" titulo="Sair da conta" onPress={() => supabase.auth.signOut()} />
+          <Botao variante="texto" titulo="Apagar minha conta" onPress={() => router.push('/apagar-conta')} />
+        </Cartao>
       </ScrollView>
       <BarraNavegacao ativa="ajustes" />
     </SafeAreaView>

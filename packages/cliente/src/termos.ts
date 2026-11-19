@@ -1,7 +1,7 @@
 // Termos de uso e privacidade do familiar (docs/PRD.md, "Dados e LGPD", item 2; tela 1 da família).
 // Curtos e simples. Mudou o texto? Troque VERSAO_TERMOS (formato AAAA-MM-DD): todos aceitam de novo.
 
-export const VERSAO_TERMOS = '2026-11-19';
+export const VERSAO_TERMOS = '2026-11-20';
 
 export interface SecaoTermos {
   titulo: string;
@@ -32,7 +32,12 @@ export const TERMOS_FAMILIA: SecaoTermos[] = [
   {
     titulo: 'Como cuidamos dos dados',
     texto:
-      'Os dados ficam no Brasil, protegidos por regras de acesso: cada pessoa do grupo só vê o que a pessoa cuidada permitiu. Não vendemos nem compartilhamos dados de saúde com empresas. Você pode sair do grupo de cuidado quando quiser, em Ajustes.',
+      'Os dados ficam no Brasil, protegidos por regras de acesso: cada pessoa do grupo só vê o que a pessoa cuidada permitiu. Não vendemos nem compartilhamos dados de saúde com empresas. Você pode sair do grupo de cuidado quando quiser, em Ajustes.'
+  },
+  {
+    titulo: 'Apagar sua conta',
+    texto:
+      'Você pode apagar sua conta quando quiser, em Ajustes. O seu e-mail e os seus dados são apagados. Se você for a única pessoa no grupo de cuidado, os dados de quem você cuida também são apagados.',
   },
 ];
 

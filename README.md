@@ -98,7 +98,7 @@ supabase/
 
 ```bash
 npm install
-npm test            # 282 testes: motor de regras, lógica dos apps e das Edge Functions
+npm test            # 284 testes: motor de regras, lógica dos apps e das Edge Functions
 npm run typecheck   # tipos dos dois apps e das Edge Functions
 ```
 
@@ -153,7 +153,7 @@ supabase functions serve
 4. Cadastre os segredos das Edge Functions:
    - `LLM_API_KEY`: a chave da Anthropic;
    - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` e `VAPID_SUBJECT`: as chaves do web push. A pública também está em `packages/cliente/src/notificacoes.ts`, e trocar uma exige trocar a outra.
-5. Publique as funções `agente`, `verificar-doses`, `registrar-checkin`, `pedir-ajuda`, `reenviar-lembrete` e `ler-receita`.
+5. Publique as funções `agente`, `verificar-doses`, `registrar-checkin`, `pedir-ajuda`, `reenviar-lembrete`, `ler-receita` e `apagar-conta`.
    - As funções importam `packages/regras` de fora de `supabase/functions`. Publique com os caminhos do repositório.
    - Na `verificar-doses`, a verificação de JWT fica desligada: ela confere a chave de servidor por conta própria (`_shared/autorizacao.ts`).
 
@@ -172,4 +172,5 @@ O microfone na web exige HTTPS, que a Vercel já fornece. O Chrome, o Edge e o S
   - Sem "mostrar para a família", só o responsável vê os dados e recebe alertas (regra `ve_saude` no banco).
   - Sem "conversar com a Lia", a fala não vai para a IA.
 - **Row Level Security** em todas as tabelas. Documentos ficam num Storage privado, visível só ao grupo de cuidado.
+- **Apagar a conta:** o familiar apaga a própria conta em Ajustes. Se for a única pessoa no grupo, os dados de quem ele cuida também são apagados; se não, a responsabilidade passa para a próxima pessoa do grupo.
 - **Guardamos só o necessário:** sem CPF, endereço ou plano de saúde. Sem venda ou compartilhamento comercial de dados de saúde.
