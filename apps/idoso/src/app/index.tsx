@@ -1,7 +1,7 @@
 // Tela única do idoso (visual da Variação E, docs/design.md).
 // Check-in do dia (6 rostinhos, antes de tudo) → início → (microfone) → conversa com a Lia → "Voltar ao início".
 // Nos 3 rostinhos mais baixos, a Lia entra na conversa. O alarme de remédio aparece por cima de tudo.
-// "Preciso de ajuda" fica sempre no fim do início e não depende da IA (pedir-ajuda → pedir_ajuda()).
+// "Preciso de ajuda" fica num rodapé fixo, abre 5 segundos com "Cancelar" e não depende da IA (pedir-ajuda → pedir_ajuda()).
 import {
   dataCurta,
   dosesDevidas,
@@ -21,7 +21,7 @@ import {
   type ResultadoAjuda,
 } from '@cuida/cliente';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { temposDoPaciente, type NivelCheckin, type Tempos } from '@cuida/regras';
@@ -32,7 +32,9 @@ import { TelaConsentimento } from '@/components/consentimento';
 import { QuemAcompanha } from '@/components/quem-acompanha';
 import { TelaConversa } from '@/components/conversa';
 import { TelaFamiliaAvisada } from '@/components/familia-avisada';
-import { BotaoAjuda } from '@/components/botao-ajuda';
+import { TomeiAnotado } from '@/components/anotado';
+import { BotaoAjuda, RodapeAjuda } from '@/components/botao-ajuda';
+import { TelaContagemAjuda } from '@/components/contagem-ajuda';
 import { IconeMicrofone } from '@/components/icones';
 import { TelaInstalar } from '@/components/instalar';
 import { PedirAvisos } from '@/components/pedir-avisos';
@@ -187,6 +189,11 @@ function TelaDoDia({
   const [modo, setModo] = useState<Modo>('inicio');
   const [resultadoAjuda, setResultadoAjuda] = useState<ResultadoAjuda>('avisada');
   const [enviandoAjuda, setEnviandoAjuda] = useState(false);
+  // "Preciso de ajuda" abre 5 segundos de contagem com "Cancelar" antes de avisar.
+  const [contandoAjuda, setContandoAjuda] = useState(false);
+  // Nome do remédio do último "Tomei", para o ✓ grande de confirmação.
+  const [anotado, setAnotado] = useState<string | null>(null);
+  const fimAnotado = useCallback(() => setAnotado(null), []);
   // Na web o navegador só deixa falar depois de um toque: um botão "Começar" na abertura.
   const [iniciado, setIniciado] = useState(Platform.OS !== 'web');
   const chamadas = useRef(new Set<string>());
@@ -256,8 +263,9 @@ function TelaDoDia({
     }
   }, [conversa.alertas]);
 
-  // Botão "Preciso de ajuda": Edge Function (alerta + push); se falhar, grava direto no banco.
-  const apertarAjuda = async () => {
+  // Depois da contagem: Edge Function (alerta + push); se falhar, grava direto no banco.
+  const enviarAjuda = async () => {
+    setContandoAjuda(false);
     if (enviandoAjuda) return;
     setEnviandoAjuda(true);
     const resultado = await pedirAjuda({
@@ -270,10 +278,26 @@ function TelaDoDia({
     falar(mensagemDaAjuda(resultado).fala);
   };
 
-  const botaoAjuda = <BotaoAjuda enviando={enviandoAjuda} onPress={apertarAjuda} />;
+  const botaoAjuda = (
+    <BotaoAjuda enviando={enviandoAjuda} onPress={() => !enviandoAjuda && setContandoAjuda(true)} />
+  );
 
-  const alarme = devidas[0] && (
-    <Alarme dose={devidas[0]} apelido={apelido} agora={agora} tempos={tempos} onTomei={confirmar} onAdiar={adiarDose} />
+  const tomei = async (doseId: string) => {
+    const ok = await confirmar(doseId);
+    if (ok) {
+      const dose = doses.find((d) => d.id === doseId);
+      setAnotado(dose ? `${dose.horarios.remedios.nome}, ${dose.horarios.remedios.dose}` : 'Remédio tomado');
+    }
+    return ok;
+  };
+
+  const alarme = (
+    <>
+      {devidas[0] ? (
+        <Alarme dose={devidas[0]} apelido={apelido} agora={agora} tempos={tempos} onTomei={tomei} onAdiar={adiarDose} />
+      ) : null}
+      {anotado ? <TomeiAnotado remedio={anotado} onFim={fimAnotado} /> : null}
+    </>
   );
 
   if (!iniciado) {
@@ -295,6 +319,15 @@ function TelaDoDia({
           />
         </View>
       </SafeAreaView>
+    );
+  }
+
+  if (contandoAjuda) {
+    return (
+      <>
+        <TelaContagemAjuda onAvisar={enviarAjuda} onCancelar={() => setContandoAjuda(false)} />
+        {alarme}
+      </>
     );
   }
 
@@ -359,7 +392,7 @@ function TelaDoDia({
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: cores.fundo }} edges={['bottom']}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
         <Cabecalho agora={agora} apelido={apelido} />
         <View style={estilos.tela}>
           <AvisosNotificacao />
@@ -386,10 +419,7 @@ function TelaDoDia({
               <View style={estilos.progresso}>
                 <View style={estilos.barras} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                   {dosesHoje.map((d) => (
-                    <View
-                      key={d.id}
-                      style={[estilos.barra, { backgroundColor: d.confirmado_em ? cores.primaria : pasteis.menta.borda }]}
-                    />
+                    <View key={d.id} style={[estilos.barra, d.confirmado_em ? estilos.barraTomada : estilos.barraFalta]} />
                   ))}
                 </View>
                 <Text style={estilos.texto}>
@@ -438,7 +468,7 @@ function TelaDoDia({
                 }}
                 style={({ pressed }) => [estilos.mic, pressed && { opacity: 0.85 }]}
               >
-                <IconeMicrofone tamanho={58} cor={cores.sobrePrimaria} traco={2.1} />
+                <IconeMicrofone tamanho={48} cor={cores.sobrePrimaria} traco={2.1} />
               </Pressable>
               <Text style={[estilos.titulo, { textAlign: 'center' }]}>{rotuloMic}</Text>
             </View>
@@ -446,8 +476,7 @@ function TelaDoDia({
             <View style={{ flexGrow: 1 }} />
           )}
 
-          {botaoAjuda}
-
+          {/* Longe do "Preciso de ajuda" (que fica no rodapé fixo): são toques muito diferentes. */}
           <Pressable
             accessibilityRole="button"
             onPress={() => setModo('privacidade')}
@@ -457,6 +486,7 @@ function TelaDoDia({
           </Pressable>
         </View>
       </ScrollView>
+      <RodapeAjuda>{botaoAjuda}</RodapeAjuda>
       {alarme}
     </SafeAreaView>
   );
@@ -532,7 +562,10 @@ const estilos = StyleSheet.create({
     gap: 10,
   },
   barras: { flexDirection: 'row', gap: 6 },
-  barra: { flex: 1, height: 10, borderRadius: 5 },
+  // Tomada: cheia. Falta: só o contorno verde (6,6:1 sobre o menta), para dar para contar o que falta.
+  barra: { flex: 1, height: 14, borderRadius: 7, borderWidth: 2, borderColor: cores.primaria },
+  barraTomada: { backgroundColor: cores.primaria },
+  barraFalta: { backgroundColor: cores.superficie },
   blocoMic: {
     flexGrow: 1,
     alignItems: 'center',
@@ -541,16 +574,16 @@ const estilos = StyleSheet.create({
     paddingVertical: 22,
   },
   mic: {
-    width: 132,
-    height: 132,
-    borderRadius: 66,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
     backgroundColor: cores.primaria,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 10,
     borderColor: pasteis.menta.fundo,
   },
-  privacidade: { minHeight: 56, alignItems: 'center', justifyContent: 'center' },
+  privacidade: { minHeight: 56, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
   linkPrivacidade: {
     fontFamily: fontes.textoNegrito,
     fontSize: 20,

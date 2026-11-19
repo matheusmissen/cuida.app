@@ -1,7 +1,17 @@
-// "Preciso de ajuda" (docs/PRD.md): sempre no fim do início e do check-in. Não depende da IA.
+// "Preciso de ajuda" (docs/PRD.md): sempre à vista, num rodapé fixo do início e do check-in. Não depende da IA.
 // Visual da Variação E (docs/design.md): pílula pêssego de alerta com borda, ícone num círculo laranja forte.
-import { cores, fontes, IconeTelefone } from '@cuida/visual';
+import { cores, espacos, fontes, IconeTelefone } from '@cuida/visual';
+import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+
+/** Rodapé fixo, fora da rolagem: o botão de ajuda nunca some da tela, mesmo em celular pequeno. */
+export function RodapeAjuda({ children }: { children: ReactNode }) {
+  return (
+    <View style={estilos.rodape}>
+      <View style={estilos.rodapeMiolo}>{children}</View>
+    </View>
+  );
+}
 
 export function BotaoAjuda({ enviando, onPress }: { enviando: boolean; onPress: () => void }) {
   return (
@@ -24,6 +34,14 @@ export function BotaoAjuda({ enviando, onPress }: { enviando: boolean; onPress: 
 }
 
 const estilos = StyleSheet.create({
+  rodape: {
+    backgroundColor: cores.fundo,
+    borderTopWidth: 1.5,
+    borderTopColor: cores.borda,
+    paddingHorizontal: espacos.lateral,
+    paddingVertical: 12,
+  },
+  rodapeMiolo: { width: '100%', maxWidth: 560, alignSelf: 'center' },
   botao: {
     minHeight: 76,
     borderRadius: 38,
