@@ -1,6 +1,6 @@
 // Adicionar documento (visual da Variação E, docs/design.md).
 // Foto pela câmera ou arquivo/PDF → bucket "documentos" em <paciente_id>/<arquivo> → linha em documentos.
-// Receita segue para "Confira a receita"; exame e relatório só ficam guardados.
+// Receita segue para "Confira a receita" e pedido médico para "Confira o pedido"; exame e relatório só ficam guardados.
 import { NOME_TIPO, tituloDoDocumento, type TipoDocumento } from '@cuida/cliente';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -16,22 +16,24 @@ import {
   IconeSetaEsquerda,
 } from '@/components/icones';
 import { Botao, Campo, Erro, TituloPagina } from '@/components/ui';
+import { IconeCalendario } from '@cuida/visual';
 import { enviarDocumento, escolherArquivo, tirarFoto, validarArquivo, type ArquivoEscolhido } from '@/lib/documentos';
 import { usePaciente } from '@/lib/paciente';
 import { espacos, fontes, paleta, sombras } from '@/lib/tema';
 
 const OPCOES: { tipo: TipoDocumento; descricao: string; Icone: typeof IconePilula; fundo: string; cor: string; exemplo: string }[] = [
   { tipo: 'receita', descricao: 'A Lia lê e sugere os alarmes', Icone: IconePilula, fundo: paleta.lilas.fundo, cor: paleta.lilas.forte, exemplo: 'Ex.: Hematologia' },
+  { tipo: 'pedido', descricao: 'A Lia lê e sugere a consulta', Icone: IconeCalendario, fundo: paleta.amarelo.fundo, cor: paleta.amarelo.texto, exemplo: 'Ex.: Retorno com a hematologista' },
   { tipo: 'exame', descricao: 'Sangue, imagem, laudos', Icone: IconeFrasco, fundo: paleta.salvia.fundo, cor: paleta.salvia.forte, exemplo: 'Ex.: Hemograma' },
   { tipo: 'relatorio', descricao: 'Consultas, altas, encaminhamentos', Icone: IconeDocumento, fundo: paleta.pessego.fundo, cor: paleta.pessego.texto, exemplo: 'Ex.: Consulta de retorno' },
 ];
-const ABA: Record<TipoDocumento, string> = { receita: 'receitas', exame: 'exames', relatorio: 'relatorios' };
+const ABA: Record<TipoDocumento, string> = { receita: 'receitas', pedido: 'pedidos', exame: 'exames', relatorio: 'relatorios' };
 
 export default function Adicionar() {
   const { paciente } = usePaciente();
   const { tipo: tipoParam } = useLocalSearchParams<{ tipo?: string }>();
   const [tipo, setTipo] = useState<TipoDocumento>(
-    tipoParam === 'exame' || tipoParam === 'relatorio' ? tipoParam : 'receita',
+    tipoParam === 'pedido' || tipoParam === 'exame' || tipoParam === 'relatorio' ? tipoParam : 'receita',
   );
   const [complemento, setComplemento] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -69,6 +71,7 @@ export default function Adicionar() {
     setEnviando(false);
     if ('erro' in r) return setErro(r.erro);
     if (tipo === 'receita') router.replace({ pathname: '/documentos/receita', params: { id: r.id } });
+    else if (tipo === 'pedido') router.replace({ pathname: '/documentos/pedido', params: { id: r.id } });
     else router.replace({ pathname: '/documentos', params: { aba: ABA[tipo] } });
   }
 
@@ -146,7 +149,7 @@ export default function Adicionar() {
             <Botao
               variante="secundario"
               titulo="Escolher arquivo ou PDF"
-              icone={<IconeEnviar tamanho={20} cor={paleta.tinta} />}
+              icone={<IconeEnviar tamanho={20} cor={paleta.primaria} />}
               onPress={() => enviar(escolherArquivo)}
             />
           </View>

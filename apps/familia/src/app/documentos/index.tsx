@@ -1,7 +1,8 @@
 // Documentos da família (visual da Variação E, docs/design.md).
-// Receitas (lidas pela Lia e conferidas pela família), exames e relatórios (só guardados).
+// Receitas e pedidos médicos (lidos pela Lia e conferidos pela família), exames e relatórios (só guardados).
 import {
   SELECT_DOCUMENTO,
+  lidoPelaLia,
   situacaoDoDocumento,
   type DocumentoLinha,
   type SituacaoDocumento,
@@ -19,17 +20,20 @@ import { usePaciente } from '@/lib/paciente';
 import { supabase } from '@/lib/supabase';
 import { espacos, fontes, paleta, sombras } from '@/lib/tema';
 
-type AbaDoc = 'receitas' | 'exames' | 'relatorios';
-const TIPO_DA_ABA: Record<AbaDoc, TipoDocumento> = { receitas: 'receita', exames: 'exame', relatorios: 'relatorio' };
-const NOME_ABA: Record<AbaDoc, string> = { receitas: 'Receitas', exames: 'Exames', relatorios: 'Relatórios' };
+type AbaDoc = 'receitas' | 'pedidos' | 'exames' | 'relatorios';
+const ABAS: AbaDoc[] = ['receitas', 'pedidos', 'exames', 'relatorios'];
+const TIPO_DA_ABA: Record<AbaDoc, TipoDocumento> = { receitas: 'receita', pedidos: 'pedido', exames: 'exame', relatorios: 'relatorio' };
+const NOME_ABA: Record<AbaDoc, string> = { receitas: 'Receitas', pedidos: 'Pedidos', exames: 'Exames', relatorios: 'Relatórios' };
 const VAZIO: Record<AbaDoc, string> = {
   receitas: 'Nenhuma receita ainda.',
+  pedidos: 'Nenhum pedido médico ainda.',
   exames: 'Nenhum exame guardado. Toque em + para adicionar.',
   relatorios: 'Nenhum relatório guardado. Toque em + para adicionar.',
 };
 const SELO: Record<SituacaoDocumento, { texto: string; cor: string; fundo: string }> = {
   conferir: { texto: 'Conferir', cor: paleta.sobreTinta, fundo: paleta.primaria },
   ativa: { texto: 'Alarmes ativos', cor: paleta.salvia.texto, fundo: paleta.salvia.fundo },
+  marcada: { texto: 'Consulta marcada', cor: paleta.salvia.texto, fundo: paleta.salvia.fundo },
   lendo: { texto: 'Lendo…', cor: paleta.lilas.texto, fundo: paleta.lilas.fundo },
   erro: { texto: 'Não lida', cor: paleta.alerta.texto, fundo: paleta.alerta.fundo },
   guardado: { texto: 'Guardado', cor: paleta.textoSuave, fundo: paleta.superficieNeutra },
@@ -48,19 +52,20 @@ function detalhe(d: DocumentoLinha): string {
   const partes = [dataCurtaDoc(d)];
   const n = d.leitura?.itens?.length;
   if (d.tipo === 'receita' && typeof n === 'number') partes.push(n === 1 ? '1 remédio' : `${n} remédios`);
-  if (d.tipo !== 'receita') partes.push(d.mime === 'application/pdf' ? 'PDF' : 'Foto');
+  if (d.tipo === 'pedido' && d.leitura?.pedido?.especialidade) partes.push(d.leitura.pedido.especialidade);
+  else if (d.tipo !== 'receita') partes.push(d.mime === 'application/pdf' ? 'PDF' : 'Foto');
   return partes.join(' · ');
 }
 
 export default function Documentos() {
   const { paciente } = usePaciente();
   const { aba: abaParam } = useLocalSearchParams<{ aba?: string }>();
-  const [aba, setAba] = useState<AbaDoc>(abaParam === 'exames' || abaParam === 'relatorios' ? abaParam : 'receitas');
+  const [aba, setAba] = useState<AbaDoc>(ABAS.includes(abaParam as AbaDoc) ? (abaParam as AbaDoc) : 'receitas');
   const [documentos, setDocumentos] = useState<DocumentoLinha[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
-    if (abaParam === 'exames' || abaParam === 'relatorios' || abaParam === 'receitas') setAba(abaParam);
+    if (ABAS.includes(abaParam as AbaDoc)) setAba(abaParam as AbaDoc);
   }, [abaParam]);
 
   const carregar = useCallback(async () => {
@@ -80,7 +85,7 @@ export default function Documentos() {
     }, [carregar]),
   );
 
-  // Enquanto alguma receita está sendo lida, atualiza a cada 4 s.
+  // Enquanto alguma receita ou pedido está sendo lido, atualiza a cada 4 s.
   const lendo = (documentos ?? []).some((d) => situacaoDoDocumento(d) === 'lendo');
   useEffect(() => {
     if (!lendo) return;
@@ -94,8 +99,8 @@ export default function Documentos() {
   const lista = (documentos ?? []).filter((d) => d.tipo === TIPO_DA_ABA[aba]);
 
   async function abrir(d: DocumentoLinha) {
-    if (d.tipo === 'receita') {
-      router.push({ pathname: '/documentos/receita', params: { id: d.id } });
+    if (d.tipo === 'receita' || d.tipo === 'pedido') {
+      router.push({ pathname: d.tipo === 'receita' ? '/documentos/receita' : '/documentos/pedido', params: { id: d.id } });
       return;
     }
     if (!(await abrirArquivo(d.arquivo_path))) setErro('Não foi possível abrir o arquivo agora.');
@@ -120,7 +125,7 @@ export default function Documentos() {
         </View>
 
         <View style={estilos.abas} accessibilityRole="tablist" aria-label="Tipo de documento">
-          {(Object.keys(NOME_ABA) as AbaDoc[]).map((a) => {
+          {ABAS.map((a) => {
             const ativa = a === aba;
             const n = contagem(a);
             return (
@@ -134,31 +139,33 @@ export default function Documentos() {
               >
                 <Text style={[estilos.textoAba, ativa && { color: paleta.sobreTinta }]} numberOfLines={1}>
                   {NOME_ABA[a]}
-                  {n && a !== 'receitas' ? ` · ${n}` : ''}
+                  {n && !lidoPelaLia(TIPO_DA_ABA[a]) ? ` · ${n}` : ''}
                 </Text>
               </Pressable>
             );
           })}
         </View>
 
-        {aba === 'receitas' && (
-          <View style={estilos.nova}>
+        {(aba === 'receitas' || aba === 'pedidos') && (
+          <View style={[estilos.nova, aba === 'pedidos' && { backgroundColor: paleta.amarelo.fundo, borderColor: paleta.amarelo.borda }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={estilos.iconeNova}>
                 <IconeLeitura tamanho={22} cor={paleta.sobreTinta} />
               </View>
-              <Text style={estilos.tituloNova}>Nova receita?</Text>
+              <Text style={estilos.tituloNova}>{aba === 'receitas' ? 'Nova receita?' : 'Novo pedido médico?'}</Text>
             </View>
-            <Text style={estilos.textoNova}>
-              Tire uma foto. A Lia lê os remédios e sugere os alarmes, e você confere antes de ativar.
+            <Text style={[estilos.textoNova, aba === 'pedidos' && { color: paleta.amarelo.texto }]}>
+              {aba === 'receitas'
+                ? 'Tire uma foto. A Lia lê os remédios e sugere os alarmes, e você confere antes de ativar.'
+                : 'Tire uma foto do pedido, da guia ou do cartão de retorno. A Lia sugere a consulta e você confere antes de salvar.'}
             </Text>
             <Pressable
               accessibilityRole="button"
-              onPress={() => router.push({ pathname: '/documentos/adicionar', params: { tipo: 'receita' } })}
+              onPress={() => router.push({ pathname: '/documentos/adicionar', params: { tipo: TIPO_DA_ABA[aba] } })}
               style={({ pressed }) => [estilos.lerReceita, pressed && { opacity: 0.85 }]}
             >
               <IconeCamera tamanho={18} cor={paleta.sobreTinta} traco={2.2} />
-              <Text style={estilos.textoLerReceita}>Ler receita</Text>
+              <Text style={estilos.textoLerReceita}>{aba === 'receitas' ? 'Ler receita' : 'Ler pedido'}</Text>
             </Pressable>
           </View>
         )}
@@ -175,7 +182,7 @@ export default function Documentos() {
           <Cartao style={{ paddingVertical: 6, gap: 0 }}>
             {lista.map((d, i) => {
               const s = SELO[situacaoDoDocumento(d)];
-              const destaque = d.tipo === 'receita' && d.status !== 'erro';
+              const destaque = lidoPelaLia(d.tipo) && d.status !== 'erro';
               return (
                 <View key={d.id}>
                   {i > 0 && <Divisor />}
@@ -226,12 +233,11 @@ const estilos = StyleSheet.create({
     backgroundColor: paleta.primaria,
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 12px 24px rgba(24,24,28,0.18)',
   },
   abas: { backgroundColor: paleta.cartao, borderRadius: 999, padding: 6, flexDirection: 'row', gap: 4, boxShadow: sombras.cartao },
-  aba: { flex: 1, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  textoAba: { fontFamily: fontes.textoNegrito, fontSize: 15, color: paleta.textoSecundario },
-  nova: { backgroundColor: paleta.lilas.fundo, borderRadius: 30, padding: 20, gap: 12 },
+  aba: { flexGrow: 1, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  textoAba: { fontFamily: fontes.textoNegrito, fontSize: 14, color: paleta.textoSecundario },
+  nova: { backgroundColor: paleta.lilas.fundo, borderColor: paleta.lilas.borda, borderWidth: 1.5, borderRadius: 26, padding: 20, gap: 12 },
   iconeNova: { width: 44, height: 44, borderRadius: 22, backgroundColor: paleta.primaria, alignItems: 'center', justifyContent: 'center' },
   tituloNova: { fontFamily: fontes.destaque, fontSize: 20, color: paleta.tinta },
   textoNova: { fontFamily: fontes.texto, fontSize: 15, lineHeight: 21, color: paleta.lilas.texto },

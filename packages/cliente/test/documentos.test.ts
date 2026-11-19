@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import {
   aplicarEdicao,
   caminhoDoArquivo,
+  consultaDoFormulario,
+  formularioDoPedido,
+  lidoPelaLia,
   contarAlarmesConferidos,
   descricaoDoItem,
   itensParaConferencia,
@@ -110,4 +113,56 @@ test('situação na lista de documentos', () => {
   assert.equal(situacaoDoDocumento({ tipo: 'receita', status: 'enviado' }), 'lendo');
   assert.equal(situacaoDoDocumento({ tipo: 'receita', status: 'erro' }), 'erro');
   assert.equal(situacaoDoDocumento({ tipo: 'exame', status: 'conferida' }), 'guardado');
+});
+
+test('pedido médico: selo na lista conforme a conferência', () => {
+  assert.equal(situacaoDoDocumento({ tipo: 'pedido', status: 'enviado' }), 'lendo');
+  assert.equal(situacaoDoDocumento({ tipo: 'pedido', status: 'aguardando_conferencia' }), 'conferir');
+  assert.equal(situacaoDoDocumento({ tipo: 'pedido', status: 'conferida', consulta_id: 'c1' }), 'marcada');
+  assert.equal(situacaoDoDocumento({ tipo: 'pedido', status: 'conferida', consulta_id: null }), 'guardado');
+  assert.equal(situacaoDoDocumento({ tipo: 'pedido', status: 'erro' }), 'erro');
+  assert.equal(lidoPelaLia('pedido'), true);
+  assert.equal(lidoPelaLia('exame'), false);
+});
+
+test('pedido médico: a sugestão da Lia preenche o formulário', () => {
+  const f = formularioDoPedido({
+    tipo_pedido: 'consulta',
+    descricao: 'Avaliação',
+    medico: 'Dra. Ana',
+    especialidade: 'Hematologia',
+    data: '2026-12-03',
+    data_pelo_prazo: false,
+    hora: '14:30',
+    local: 'Clínica Exemplo',
+    observacao: 'Levar exames',
+    precisa_revisao: false,
+    motivos: [],
+  });
+  assert.deepEqual(f, {
+    data: '03/12/2026',
+    hora: '14:30',
+    medico: 'Dra. Ana',
+    especialidade: 'Hematologia',
+    local: 'Clínica Exemplo',
+    observacao: 'Levar exames',
+  });
+  assert.deepEqual(formularioDoPedido(null), { data: '', hora: '', medico: '', especialidade: '', local: '', observacao: '' });
+});
+
+test('pedido médico: o formulário conferido vira o corpo de conferir_pedido', () => {
+  const agora = new Date('2026-11-20T10:00:00-03:00');
+  const base = { data: '03/12/2026', hora: '14:30', medico: ' Dra.  Ana ', especialidade: '', local: '', observacao: '' };
+  const ok = consultaDoFormulario(base, agora);
+  assert.ok('consulta' in ok);
+  if ('consulta' in ok) {
+    assert.equal(ok.consulta.quando, '2026-12-03T17:30:00.000Z');
+    assert.equal(ok.consulta.medico, 'Dra. Ana');
+    assert.equal(ok.consulta.especialidade, null);
+    assert.equal(ok.consulta.local, null);
+  }
+  assert.deepEqual(consultaDoFormulario({ ...base, data: '' }, agora), { erro: 'Escreva a data da consulta, por exemplo 28/11/2026.' });
+  assert.deepEqual(consultaDoFormulario({ ...base, hora: '25:00' }, agora), { erro: 'Escreva o horário, por exemplo 14:30.' });
+  assert.deepEqual(consultaDoFormulario({ ...base, data: '20/11/2026', hora: '09:00' }, agora), { erro: 'Essa data e horário já passaram.' });
+  assert.deepEqual(consultaDoFormulario({ ...base, medico: '' }, agora), { erro: 'Escreva o médico ou a especialidade.' });
 });

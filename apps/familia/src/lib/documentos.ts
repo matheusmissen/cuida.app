@@ -2,6 +2,7 @@
 // tabela documentos e Edge Function ler-receita. A lógica pura fica em @cuida/cliente.
 import {
   caminhoDoArquivo,
+  lidoPelaLia,
   MIMES_LEITURA,
   mimeDoArquivo,
   TAMANHO_MAXIMO_LEITURA,
@@ -45,11 +46,11 @@ export async function escolherArquivo(): Promise<ArquivoEscolhido | null> {
   return { uri: a.uri, nome: a.name, mime: a.mimeType ?? null, tamanho: a.size ?? null, file: a.file };
 }
 
-/** Confere o arquivo antes de enviar. Receitas precisam de um formato que a ler-receita lê. */
+/** Confere o arquivo antes de enviar. Receitas e pedidos precisam de um formato que a ler-receita lê. */
 export function validarArquivo(tipo: TipoDocumento, arquivo: ArquivoEscolhido): string | null {
   const mime = mimeDoArquivo(arquivo.nome, arquivo.mime);
   if (!mime) return 'Formato não aceito. Envie uma foto (JPG ou PNG) ou um PDF.';
-  if (tipo === 'receita') {
+  if (lidoPelaLia(tipo)) {
     if (!MIMES_LEITURA.includes(mime)) return 'A Lia lê fotos JPG, PNG ou WEBP e PDF. Tire a foto pelo app ou envie um PDF.';
     if (arquivo.tamanho && arquivo.tamanho > TAMANHO_MAXIMO_LEITURA) {
       return 'Arquivo maior que 5 MB. Tire a foto com menos zoom ou envie um PDF menor.';
@@ -95,8 +96,8 @@ export async function enviarDocumento(p: {
       data_documento: hoje,
       arquivo_path: caminho,
       mime,
-      // Exames e relatórios só são guardados; receitas esperam a leitura da Lia.
-      status: p.tipo === 'receita' ? 'enviado' : 'conferida',
+      // Exames e relatórios só são guardados; receitas e pedidos esperam a leitura da Lia.
+      status: lidoPelaLia(p.tipo) ? 'enviado' : 'conferida',
     })
     .select('id')
     .single();
@@ -108,11 +109,14 @@ export async function enviarDocumento(p: {
   return { id: data.id };
 }
 
-/** Pede à Lia (Edge Function ler-receita) para ler a receita. Nunca cria alarmes. */
-export async function lerReceita(documentoId: string): Promise<{ erro: string | null }> {
+/** Pede à Lia (Edge Function ler-receita) para ler a receita ou o pedido. Nunca cria alarmes nem consultas. */
+export async function lerReceita(documentoId: string, tipo: 'receita' | 'pedido' = 'receita'): Promise<{ erro: string | null }> {
   const { error } = await supabase.functions.invoke('ler-receita', { body: { documento_id: documentoId } });
   if (!error) return { erro: null };
-  let mensagem = 'Não foi possível ler a receita agora. Tente de novo ou cadastre os remédios à mão.';
+  let mensagem =
+    tipo === 'pedido'
+      ? 'Não foi possível ler o pedido agora. Tente de novo ou marque a consulta à mão.'
+      : 'Não foi possível ler a receita agora. Tente de novo ou cadastre os remédios à mão.';
   try {
     const corpo = await (error as { context?: Response }).context?.json();
     if (corpo?.erro) mensagem = String(corpo.erro).charAt(0).toUpperCase() + String(corpo.erro).slice(1) + '.';

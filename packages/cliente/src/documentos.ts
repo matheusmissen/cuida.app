@@ -1,10 +1,11 @@
-// Documentos da família (receitas, exames, relatórios) — lógica pura, testada em Node.
+// Documentos da família (receitas, pedidos médicos, exames, relatórios) — lógica pura, testada em Node.
 // A leitura da receita é feita pela Edge Function ler-receita (só sugestões). Aqui fica o
 // estado da conferência: só itens conferidos pela família viram alarmes
 // (criar_alarmes_da_receita). Na dúvida, o item fica "Precisa de você" e fora da lista.
+import { instanteDaConsulta, lerDataDaConsulta } from './consultas.ts';
 import { lerHora } from './formato.ts';
 
-export type TipoDocumento = 'receita' | 'exame' | 'relatorio';
+export type TipoDocumento = 'receita' | 'pedido' | 'exame' | 'relatorio';
 export type StatusDocumento = 'enviado' | 'lendo' | 'aguardando_conferencia' | 'conferida' | 'erro';
 
 /** Item como a ler-receita grava em documentos.leitura.itens (supabase/functions/_shared/receita.ts). */
@@ -29,13 +30,15 @@ export interface DocumentoLinha {
   arquivo_path: string;
   mime: string | null;
   status: StatusDocumento;
-  leitura: { itens?: ItemLeitura[] } | null;
+  leitura: { itens?: ItemLeitura[]; pedido?: LeituraPedido } | null;
   criado_em: string;
   conferido_em: string | null;
+  /** Consulta criada a partir do pedido médico (conferir_pedido). */
+  consulta_id?: string | null;
 }
 
 export const SELECT_DOCUMENTO =
-  'id, paciente_id, tipo, titulo, data_documento, arquivo_path, mime, status, leitura, criado_em, conferido_em';
+  'id, paciente_id, tipo, titulo, data_documento, arquivo_path, mime, status, leitura, criado_em, conferido_em, consulta_id';
 
 /** Item na tela "Confira a receita". */
 export interface ItemConferencia extends ItemLeitura {
@@ -48,6 +51,7 @@ export interface ItemConferencia extends ItemLeitura {
 
 export const NOME_TIPO: Record<TipoDocumento, string> = {
   receita: 'Receita',
+  pedido: 'Pedido médico',
   exame: 'Exame',
   relatorio: 'Relatório médico',
 };
@@ -188,13 +192,83 @@ export function aplicarEdicao(item: ItemConferencia, e: Edicao): { item: ItemCon
   };
 }
 
-export type SituacaoDocumento = 'lendo' | 'conferir' | 'ativa' | 'erro' | 'guardado';
+export type SituacaoDocumento = 'lendo' | 'conferir' | 'ativa' | 'marcada' | 'erro' | 'guardado';
+
+/** Receitas e pedidos médicos são lidos pela Lia; exames e relatórios só são guardados. */
+export const lidoPelaLia = (tipo: TipoDocumento): boolean => tipo === 'receita' || tipo === 'pedido';
 
 /** O que mostrar no selo da lista de documentos. */
-export function situacaoDoDocumento(d: Pick<DocumentoLinha, 'tipo' | 'status'>): SituacaoDocumento {
-  if (d.tipo !== 'receita') return 'guardado';
+export function situacaoDoDocumento(d: Pick<DocumentoLinha, 'tipo' | 'status'> & { consulta_id?: string | null }): SituacaoDocumento {
+  if (!lidoPelaLia(d.tipo)) return 'guardado';
   if (d.status === 'aguardando_conferencia') return 'conferir';
-  if (d.status === 'conferida') return 'ativa';
+  if (d.status === 'conferida') return d.tipo === 'receita' ? 'ativa' : d.consulta_id ? 'marcada' : 'guardado';
   if (d.status === 'erro') return 'erro';
   return 'lendo';
+}
+
+// Pedido médico ------------------------------------------------------------------
+
+/** Como a ler-receita grava em documentos.leitura.pedido (supabase/functions/_shared/pedido.ts). */
+export interface LeituraPedido {
+  tipo_pedido: 'consulta' | 'retorno' | 'exame' | 'outro';
+  descricao: string;
+  medico: string;
+  especialidade: string;
+  data: string | null;
+  data_pelo_prazo: boolean;
+  hora: string | null;
+  local: string;
+  observacao: string;
+  precisa_revisao: boolean;
+  motivos: string[];
+}
+
+/** Campos da tela "Confira o pedido" (texto, como a família digita). */
+export interface FormularioPedido {
+  data: string;
+  hora: string;
+  medico: string;
+  especialidade: string;
+  local: string;
+  observacao: string;
+}
+
+/** Preenche o formulário com a sugestão da Lia (data em DD/MM/AAAA; vazio onde ela não leu). */
+export function formularioDoPedido(p: LeituraPedido | null | undefined): FormularioPedido {
+  const data = p?.data && /^\d{4}-\d{2}-\d{2}$/.test(p.data) ? `${p.data.slice(8, 10)}/${p.data.slice(5, 7)}/${p.data.slice(0, 4)}` : '';
+  return {
+    data,
+    hora: p?.hora ?? '',
+    medico: p?.medico ?? '',
+    especialidade: p?.especialidade ?? '',
+    local: p?.local ?? '',
+    observacao: p?.observacao ?? '',
+  };
+}
+
+const limpo = (t: string, max: number) => t.replace(/\s+/g, ' ').trim().slice(0, max);
+
+/** Confere o formulário e monta o corpo de conferir_pedido. A data não pode ter passado. */
+export function consultaDoFormulario(
+  f: FormularioPedido,
+  agora: Date,
+): { consulta: { quando: string; medico: string | null; especialidade: string | null; local: string | null; observacao: string | null } } | { erro: string } {
+  const data = lerDataDaConsulta(f.data, agora);
+  if (!data) return { erro: 'Escreva a data da consulta, por exemplo 28/11/2026.' };
+  const hora = lerHora(f.hora);
+  if (!hora) return { erro: 'Escreva o horário, por exemplo 14:30.' };
+  const quando = instanteDaConsulta(data, hora);
+  if (Date.parse(quando) < agora.getTime()) return { erro: 'Essa data e horário já passaram.' };
+  const medico = limpo(f.medico, 80);
+  const especialidade = limpo(f.especialidade, 60);
+  if (!medico && !especialidade) return { erro: 'Escreva o médico ou a especialidade.' };
+  return {
+    consulta: {
+      quando,
+      medico: medico || null,
+      especialidade: especialidade || null,
+      local: limpo(f.local, 120) || null,
+      observacao: limpo(f.observacao, 300) || null,
+    },
+  };
 }
