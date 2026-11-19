@@ -3,7 +3,7 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useAparelho } from '@/lib/aparelho';
-import { cores } from '@/lib/tema';
+import { cores } from '@cuida/visual';
 
 export default function VincularPorLink() {
   const { codigo } = useLocalSearchParams<{ codigo?: string }>();
@@ -22,7 +22,7 @@ export default function VincularPorLink() {
   if (pronto) return <Redirect href="/" />;
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: cores.fundo }}>
-      <ActivityIndicator size="large" color={cores.tinta} />
+      <ActivityIndicator size="large" color={cores.primaria} />
     </View>
   );
 }

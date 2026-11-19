@@ -38,7 +38,7 @@ O objetivo do MVP é provar que **o idoso usa sozinho e a família fica sabendo 
 
 - Tema e componentes em `packages/visual`: cores, fontes (Nunito 800 e Atkinson Hyperlegible), `BotaoPrincipal`, `BotaoSecundario`, `Cartao`, `Quadradinho`, `Campo`, `BarraAbas`, `Rostinho`/`GradeRostinhos`/`SeloRostinho`, `Paisagem`, `DesenhoComprimido` e ícones. Use esses componentes; não copie cores. Ao mudar `packages/visual/src/tema.ts`, mude também `docs/design.md` (o teste `packages/visual/test/tema.test.ts` confere). Conferência visual: `/vitrine` nos dois apps.
 - Botões ficam em **uma linha**: textos curtos; o botão diminui a letra se faltar espaço (no idoso, nunca abaixo de 20).
-- Telas já na Variação E: idoso (instalar, primeiro acesso, avisos, consentimento/Minha privacidade, check-in, hora do remédio); família (conectar o celular, alerta, grupo, convite, consultas, termos, cor/formato/foto do remédio). Ainda no visual anterior "Manhã Clara" (`docs/design/tokens.json`): início e conversa do idoso; painel, remédios, documentos, alertas, ajustes e entrar da família.
+- Telas já na Variação E: idoso (todas: instalar, primeiro acesso, avisos, consentimento/Minha privacidade, check-in, início, conversa com a Lia, "Sua família foi avisada", hora do remédio); família (conectar o celular, alerta, grupo, convite, consultas, termos, cor/formato/foto do remédio). Ainda no visual anterior "Manhã Clara" (`docs/design/tokens.json`): painel, remédios, documentos, alertas, ajustes e entrar da família.
 
 ## Regras de interface do app do idoso
 
