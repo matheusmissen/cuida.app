@@ -38,7 +38,7 @@ O objetivo do MVP é provar que **o idoso usa sozinho e a família fica sabendo 
 
 - Tema e componentes em `packages/visual`: cores, fontes (Nunito 800 e Atkinson Hyperlegible), `BotaoPrincipal`, `BotaoSecundario`, `Cartao`, `Quadradinho`, `Campo`, `BarraAbas`, `Rostinho`/`GradeRostinhos`/`SeloRostinho`, `Paisagem`, `DesenhoComprimido` e ícones. Use esses componentes; não copie cores. Ao mudar `packages/visual/src/tema.ts`, mude também `docs/design.md` (o teste `packages/visual/test/tema.test.ts` confere). Conferência visual: `/vitrine` nos dois apps.
 - Botões ficam em **uma linha**: textos curtos; o botão diminui a letra se faltar espaço (no idoso, nunca abaixo de 20).
-- Telas já na Variação E: idoso (todas: instalar, primeiro acesso, avisos, consentimento/Minha privacidade, check-in, início, conversa com a Lia, "Sua família foi avisada", hora do remédio); família (conectar o celular, alerta, grupo, convite, consultas, termos, cor/formato/foto do remédio). Ainda no visual anterior "Manhã Clara" (`docs/design/tokens.json`): painel, remédios, documentos, alertas, ajustes e entrar da família.
+- Todas as telas dos dois apps estão na Variação E. Na família, as telas mais antigas usam `components/ui.tsx` e `lib/tema.ts`, que só repassam os valores de `@cuida/visual` (sem cores próprias); a barra de baixo é a `BarraAbas`. O visual anterior ("Manhã Clara") está só no histórico do Git.
 
 ## Regras de interface do app do idoso
 
@@ -106,7 +106,6 @@ O objetivo do MVP é provar que **o idoso usa sozinho e a família fica sabendo 
 - Link do vídeo no README.
 - A Lia ler o pedido médico e sugerir a consulta (PRD, seção 7).
 - "Apagar minha conta" no app (os termos ainda não prometem isso).
-- Refazer na Variação E as telas que ainda estão no visual anterior.
 
 ## Como trabalhar neste repositório
 

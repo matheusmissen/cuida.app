@@ -1,4 +1,4 @@
-// Painel do dia da família (referências: docs/design/telas/Familia-Painel.dc.html e Familia-Alerta.dc.html).
+// Painel do dia da família (visual da Variação E, docs/design.md): paisagem no topo, resumo, remédios e alertas.
 import {
   checkinDoPainel,
   horaCurta,
@@ -28,6 +28,7 @@ import { Avatar, Botao, Cartao, cores, Divisor, Erro, Selo, Texto, Titulo, Titul
 import { usePaciente } from '@/lib/paciente';
 import { useSessao } from '@/lib/sessao';
 import { supabase } from '@/lib/supabase';
+import { Paisagem, paisagem, usePeriodo } from '@cuida/visual';
 import { espacos, fontes, paleta } from '@/lib/tema';
 
 type Cor = { texto: string; cor: string; fundo: string };
@@ -37,7 +38,7 @@ const SITUACAO: Record<SituacaoDose, Cor> = {
   agora: { texto: 'Alarme tocando', cor: paleta.salvia.texto, fundo: paleta.salvia.fundo },
   futura: { texto: 'Mais tarde', cor: paleta.textoSuave, fundo: paleta.superficieNeutra },
 };
-const PROXIMO: Cor = { texto: 'Próximo', cor: paleta.sobreTinta, fundo: paleta.tinta };
+const PROXIMO: Cor = { texto: 'Próximo', cor: paleta.sobreTinta, fundo: paleta.primaria };
 const NIVEL: Record<AlertaLinha['nivel'], string> = {
   vermelho: 'Urgente',
   laranja: 'Atenção',
@@ -87,6 +88,7 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
   const { paciente, papel } = usePaciente();
   const { consultas, recarregar: recarregarConsultas } = useConsultas(pacienteId);
   const { sessao } = useSessao();
+  const periodo = usePeriodo();
   const [doses, setDoses] = useState<DoseComRemedio[]>([]);
   const [alertas, setAlertas] = useState<AlertaLinha[]>([]);
   const [ultimoCheckin, setUltimoCheckin] = useState<CheckinLinha | null>(null);
@@ -188,15 +190,22 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: cores.fundo }}>
-      <ScrollView contentContainerStyle={estilos.conteudo}>
-        <View style={estilos.cabecalho}>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={estilos.ola}>{emAlertas ? 'Alertas' : 'Olá!'}</Text>
-            <TituloPagina>{emAlertas ? `Avisos de ${nome}` : `${nome} hoje`}</TituloPagina>
+      <ScrollView contentContainerStyle={{ paddingBottom: ESPACO_BARRA + 24 }}>
+        {emAlertas ? (
+          <View style={[estilos.largura, estilos.cabecalho]}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={estilos.ola}>Alertas</Text>
+              <TituloPagina>{`Avisos de ${nome}`}</TituloPagina>
+            </View>
+            <Avatar nome={nome} />
           </View>
-          <Avatar nome={nome} />
-        </View>
-
+        ) : (
+          <Paisagem altura={170}>
+            <Text style={[estilos.ola, { color: paisagem[periodo].texto }]}>Olá!</Text>
+            <TituloPagina style={{ color: paisagem[periodo].texto }}>{`${nome} hoje`}</TituloPagina>
+          </Paisagem>
+        )}
+        <View style={[estilos.largura, estilos.miolo]}>
         <Erro mensagem={erro} />
 
         {urgentes.map((a) => (
@@ -222,7 +231,7 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
                     <Text style={[estilos.linhaTexto, !a.visto_em && { fontFamily: fontes.textoNegrito }]} numberOfLines={2}>
                       {a.motivo}
                     </Text>
-                    <Text style={estilos.hora}>{horaCurta(a.criado_em)} · {a.visto_em ? 'visto' : 'não visto'}</Text>
+                    <Text style={estilos.horaAlerta}>{horaCurta(a.criado_em)} · {a.visto_em ? 'visto' : 'não visto'}</Text>
                   </View>
                   <Selo
                     texto={NIVEL[a.nivel]}
@@ -236,14 +245,14 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
         ) : (
           <>
             <View style={estilos.resumo}>
-              <View style={[estilos.blocoResumo, { backgroundColor: paleta.salvia.fundo }]}>
+              <View style={[estilos.blocoResumo, { backgroundColor: paleta.salvia.fundo, borderColor: paleta.salvia.borda }]}>
                 <Text style={[estilos.rotuloResumo, { color: paleta.salvia.texto }]}>Remédios tomados</Text>
                 <Text style={estilos.numero}>
                   {tomadas}
                   <Text style={[estilos.numeroMenor, { color: paleta.salvia.texto }]}> / {doses.length}</Text>
                 </Text>
               </View>
-              <View style={[estilos.blocoResumo, { backgroundColor: paleta.lilas.fundo }]}>
+              <View style={[estilos.blocoResumo, { backgroundColor: paleta.lilas.fundo, borderColor: paleta.lilas.borda }]}>
                 <Text style={[estilos.rotuloResumo, { color: paleta.lilas.texto }]}>Último uso</Text>
                 <Text style={estilos.numero}>
                   <Text style={[estilos.numeroMenor, { color: paleta.lilas.texto }]}>{prefixoUso}</Text>
@@ -314,6 +323,7 @@ function PainelDoDia({ pacienteId }: { pacienteId: string }) {
             <CartaoProximaConsulta consultas={consultas} agora={agora} />
           </>
         )}
+        </View>
       </ScrollView>
       <BarraNavegacao ativa={emAlertas ? 'alertas' : 'hoje'} alertasNovos={naoVistos} />
     </SafeAreaView>
@@ -330,20 +340,30 @@ const estilos = StyleSheet.create({
     alignSelf: 'center',
     paddingBottom: ESPACO_BARRA + 24,
   },
-  cabecalho: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, gap: 12 },
-  ola: { fontFamily: fontes.texto, fontSize: 15, color: paleta.textoSuave },
+  largura: { maxWidth: 640, width: '100%', alignSelf: 'center' },
+  miolo: { paddingHorizontal: espacos.margemTelaFamilia, paddingTop: 16, gap: 12 },
+  cabecalho: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: espacos.margemTelaFamilia + 4,
+    paddingTop: 24,
+    gap: 12,
+  },
+  ola: { fontFamily: fontes.texto, fontSize: 16, color: paleta.textoSuave },
   resumo: { flexDirection: 'row', gap: 12 },
-  blocoResumo: { flex: 1, borderRadius: 26, paddingVertical: 14, paddingHorizontal: 16, gap: 4 },
-  rotuloResumo: { fontFamily: fontes.texto, fontSize: 15 },
+  blocoResumo: { flex: 1, borderRadius: 24, borderWidth: 1.5, paddingVertical: 14, paddingHorizontal: 16, gap: 4 },
+  rotuloResumo: { fontFamily: fontes.textoNegrito, fontSize: 15 },
   numero: { fontFamily: fontes.destaque, fontSize: 34, lineHeight: 38, color: paleta.tinta },
   numeroMenor: { fontSize: 22 },
-  aviso: { backgroundColor: paleta.alerta.fundo, borderRadius: 26, paddingVertical: 14, paddingHorizontal: 18 },
+  aviso: { backgroundColor: paleta.alerta.fundo, borderColor: paleta.alerta.borda, borderWidth: 1.5, borderRadius: 24, paddingVertical: 14, paddingHorizontal: 18 },
   rotuloAviso: { fontFamily: fontes.textoNegrito, fontSize: 13, letterSpacing: 0.78, color: paleta.alerta.texto },
   textoAviso: { fontFamily: fontes.destaque, fontSize: 18, lineHeight: 23, color: paleta.alerta.escuro },
   linhaDose: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingVertical: 6 },
   linhaAlerta: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingVertical: 8 },
   hora: { width: 46, fontFamily: fontes.texto, fontSize: 15, color: paleta.textoSuave },
+  horaAlerta: { fontFamily: fontes.texto, fontSize: 15, color: paleta.textoSuave },
   linhaTexto: { fontFamily: fontes.texto, fontSize: 16, color: paleta.tinta },
   forte: { fontFamily: fontes.textoNegrito, color: paleta.tinta },
-  link: { fontFamily: fontes.textoNegrito, fontSize: 14, color: paleta.tinta, textDecorationLine: 'underline', paddingTop: 2 },
+  link: { fontFamily: fontes.textoNegrito, fontSize: 15, color: paleta.primaria, textDecorationLine: 'underline', paddingTop: 2 },
 });

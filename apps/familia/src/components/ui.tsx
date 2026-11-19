@@ -1,4 +1,4 @@
-// Peças de interface do app da família no visual "Manhã Clara" (tokens em lib/tema.ts).
+// Peças de interface do app da família na Variação E (docs/design.md; valores em lib/tema.ts, vindos de @cuida/visual).
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -12,7 +12,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { alvos, fontes, paleta, raios, sombras, tamanhos } from '@/lib/tema';
+import { fontes, paleta, raios, tamanhos } from '@/lib/tema';
 
 /** Nomes curtos usados pelas telas, mapeados para os tokens. */
 export const cores = {
@@ -23,7 +23,7 @@ export const cores = {
   suave: paleta.textoSuave,
   borda: paleta.divisor,
   neutra: paleta.superficieNeutra,
-  primaria: paleta.tinta,
+  primaria: paleta.primaria,
   perigo: paleta.alerta.forte,
   sucesso: paleta.salvia.forte,
 };
@@ -36,7 +36,7 @@ export function Cartao({ children, style }: { children: ReactNode; style?: Style
   return <View style={[estilos.cartao, style]}>{children}</View>;
 }
 
-/** Título de seção (17 pt, negrito). */
+/** Título de seção (Nunito 800, 19 px). */
 export function Titulo({ children }: { children: ReactNode }) {
   return (
     <Text style={estilos.titulo} accessibilityRole="header">
@@ -45,7 +45,7 @@ export function Titulo({ children }: { children: ReactNode }) {
   );
 }
 
-/** Título de página em Outfit (30 pt). */
+/** Título de página (Nunito 800, 27 px). */
 export function TituloPagina({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
   return (
     <Text style={[estilos.tituloPagina, style]} accessibilityRole="header">
@@ -103,9 +103,9 @@ export function Botao({
   desativado?: boolean;
   icone?: ReactNode;
 }) {
-  const fundo = { primario: paleta.tinta, perigo: paleta.alerta.forte, secundario: paleta.cartao, texto: 'transparent' }[variante];
-  const corTexto = variante === 'primario' || variante === 'perigo' ? paleta.sobreTinta : paleta.tinta;
-  const sombra = { primario: sombras.botaoPrincipal, perigo: sombras.alerta, secundario: sombras.cartao, texto: undefined }[variante];
+  const fundo = { primario: paleta.primaria, perigo: paleta.alerta.forte, secundario: paleta.cartao, texto: 'transparent' }[variante];
+  const borda = { primario: paleta.primaria, perigo: paleta.alerta.forte, secundario: paleta.primaria, texto: 'transparent' }[variante];
+  const corTexto = variante === 'primario' || variante === 'perigo' ? paleta.sobreTinta : paleta.primaria;
   return (
     <Pressable
       accessibilityRole="button"
@@ -115,7 +115,7 @@ export function Botao({
       disabled={carregando || desativado}
       style={({ pressed }) => [
         estilos.botao,
-        { backgroundColor: fundo, boxShadow: sombra },
+        { backgroundColor: fundo, borderColor: borda },
         (pressed || desativado) && { opacity: 0.7 },
       ]}
     >
@@ -184,44 +184,46 @@ const estilos = StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   cartao: {
     backgroundColor: cores.cartao,
-    borderRadius: raios.cartaoMedio,
+    borderRadius: raios.cartao,
+    borderWidth: 1.5,
+    borderColor: cores.borda,
     paddingVertical: 16,
     paddingHorizontal: 18,
     gap: 12,
-    boxShadow: sombras.cartao,
   },
-  titulo: { fontFamily: fontes.textoNegrito, fontSize: tamanhos.secao, color: cores.texto },
+  titulo: { fontFamily: fontes.destaque, fontSize: 19, lineHeight: 24, color: cores.texto },
   tituloPagina: {
     fontFamily: fontes.destaque,
     fontSize: tamanhos.titulo,
-    lineHeight: Math.round(tamanhos.titulo * 1.1),
-    letterSpacing: -0.3,
+    lineHeight: Math.round(tamanhos.titulo * 1.15),
     color: cores.texto,
   },
-  texto: { fontFamily: fontes.texto, fontSize: tamanhos.corpo, color: cores.texto, lineHeight: 21 },
-  rotulo: { fontFamily: fontes.textoNegrito, fontSize: 14, color: cores.secundario },
+  texto: { fontFamily: fontes.texto, fontSize: tamanhos.corpo, color: cores.texto, lineHeight: 22 },
+  rotulo: { fontFamily: fontes.textoNegrito, fontSize: 16, color: cores.texto },
   campo: {
+    minHeight: 54,
     borderRadius: raios.pequeno,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 14,
     fontSize: tamanhos.lista,
     fontFamily: fontes.texto,
     color: cores.texto,
     backgroundColor: cores.cartao,
-    borderWidth: 1,
-    borderColor: cores.borda,
+    borderWidth: 1.5,
+    borderColor: paleta.bordaCampo,
   },
   botao: {
-    minHeight: alvos.familiaMinimo,
+    minHeight: 56,
     borderRadius: raios.pilula,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 8,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
-  textoBotao: { fontFamily: fontes.textoNegrito, fontSize: tamanhos.lista },
-  selo: { alignSelf: 'flex-start', borderRadius: raios.pilula, paddingHorizontal: 11, paddingVertical: 5 },
+  textoBotao: { fontFamily: fontes.destaque, fontSize: 18 },
+  selo: { alignSelf: 'flex-start', borderRadius: raios.pilula, paddingHorizontal: 12, paddingVertical: 5 },
   textoSelo: { fontFamily: fontes.textoNegrito, fontSize: 14 },
   erro: { color: paleta.alerta.texto, fontFamily: fontes.texto, fontSize: tamanhos.corpo },
 });

@@ -1,4 +1,4 @@
-// Confira a receita (referência: docs/design/telas/Familia-Receita.dc.html).
+// Confira a receita (visual da Variação E, docs/design.md).
 // A Lia (Edge Function ler-receita) só SUGERE. Itens "Precisa de você" ficam de fora até a família
 // definir os horários. Os alarmes só nascem em criar_alarmes_da_receita, com os itens conferidos.
 import {
@@ -265,7 +265,7 @@ function CartaoItem({ item, aoMudar }: { item: ItemConferencia; aoMudar: (i: Ite
       <View style={estilos.linhaItem}>
         <Text style={estilos.nomeItem}>{item.nome}</Text>
         {pendente ? (
-          <Selo texto="Precisa de você" cor={paleta.sobreTinta} fundo={paleta.tinta} />
+          <Selo texto="Precisa de você" cor={paleta.sobreTinta} fundo={paleta.primaria} />
         ) : item.deFora ? (
           <Selo texto="Sem alarme" cor={paleta.textoSuave} fundo={paleta.superficieNeutra} />
         ) : (
@@ -381,7 +381,7 @@ const estilos = StyleSheet.create({
   resumoTexto: { fontFamily: fontes.texto, fontSize: 14, lineHeight: 19, color: paleta.lilas.texto },
   lendo: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8 },
   item: { backgroundColor: paleta.cartao, borderRadius: 24, paddingVertical: 14, paddingHorizontal: 16, gap: 8, boxShadow: sombras.cartao },
-  itemPendente: { borderWidth: 2, borderStyle: 'dashed', borderColor: paleta.tinta, boxShadow: undefined },
+  itemPendente: { borderWidth: 2, borderStyle: 'dashed', borderColor: paleta.primaria, boxShadow: undefined },
   linhaItem: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   nomeItem: { flex: 1, fontFamily: fontes.textoNegrito, fontSize: 17, color: paleta.tinta },
   editar: { width: 40, height: 40, borderRadius: 20, backgroundColor: paleta.superficieNeutra, alignItems: 'center', justifyContent: 'center' },

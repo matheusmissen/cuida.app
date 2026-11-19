@@ -150,10 +150,11 @@ function TemposDosAvisos() {
       <Texto suave>
         Se o responsável não agir em {minutosPorExtenso(tempos.escaladaMin)}, o aviso vai para todo o grupo.
       </Texto>
+      {!demonstracao && <Texto suave>O modo demonstração põe todos os tempos em 1 minuto.</Texto>}
       <Erro mensagem={erro} />
       <Botao
         variante="secundario"
-        titulo={demonstracao ? 'Voltar aos tempos normais' : 'Ligar modo demonstração (1 minuto)'}
+        titulo={demonstracao ? 'Voltar aos tempos normais' : 'Ligar modo demonstração'}
         onPress={trocar}
         carregando={salvando}
       />

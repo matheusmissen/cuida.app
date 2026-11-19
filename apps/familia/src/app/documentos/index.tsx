@@ -1,4 +1,4 @@
-// Documentos da família (referência: docs/design/telas/Familia-Documentos.dc.html).
+// Documentos da família (visual da Variação E, docs/design.md).
 // Receitas (lidas pela Lia e conferidas pela família), exames e relatórios (só guardados).
 import {
   SELECT_DOCUMENTO,
@@ -28,7 +28,7 @@ const VAZIO: Record<AbaDoc, string> = {
   relatorios: 'Nenhum relatório guardado. Toque em + para adicionar.',
 };
 const SELO: Record<SituacaoDocumento, { texto: string; cor: string; fundo: string }> = {
-  conferir: { texto: 'Conferir', cor: paleta.sobreTinta, fundo: paleta.tinta },
+  conferir: { texto: 'Conferir', cor: paleta.sobreTinta, fundo: paleta.primaria },
   ativa: { texto: 'Alarmes ativos', cor: paleta.salvia.texto, fundo: paleta.salvia.fundo },
   lendo: { texto: 'Lendo…', cor: paleta.lilas.texto, fundo: paleta.lilas.fundo },
   erro: { texto: 'Não lida', cor: paleta.alerta.texto, fundo: paleta.alerta.fundo },
@@ -130,7 +130,7 @@ export default function Documentos() {
                 accessibilityState={{ selected: ativa }}
                 accessibilityLabel={n ? `${NOME_ABA[a]}, ${n}` : NOME_ABA[a]}
                 onPress={() => setAba(a)}
-                style={[estilos.aba, ativa && { backgroundColor: paleta.tinta }]}
+                style={[estilos.aba, ativa && { backgroundColor: paleta.primaria }]}
               >
                 <Text style={[estilos.textoAba, ativa && { color: paleta.sobreTinta }]} numberOfLines={1}>
                   {NOME_ABA[a]}
@@ -223,7 +223,7 @@ const estilos = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: paleta.tinta,
+    backgroundColor: paleta.primaria,
     alignItems: 'center',
     justifyContent: 'center',
     boxShadow: '0 12px 24px rgba(24,24,28,0.18)',
@@ -232,13 +232,13 @@ const estilos = StyleSheet.create({
   aba: { flex: 1, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   textoAba: { fontFamily: fontes.textoNegrito, fontSize: 15, color: paleta.textoSecundario },
   nova: { backgroundColor: paleta.lilas.fundo, borderRadius: 30, padding: 20, gap: 12 },
-  iconeNova: { width: 44, height: 44, borderRadius: 22, backgroundColor: paleta.tinta, alignItems: 'center', justifyContent: 'center' },
+  iconeNova: { width: 44, height: 44, borderRadius: 22, backgroundColor: paleta.primaria, alignItems: 'center', justifyContent: 'center' },
   tituloNova: { fontFamily: fontes.destaque, fontSize: 20, color: paleta.tinta },
   textoNova: { fontFamily: fontes.texto, fontSize: 15, lineHeight: 21, color: paleta.lilas.texto },
   lerReceita: {
     alignSelf: 'flex-start',
     height: 44,
-    backgroundColor: paleta.tinta,
+    backgroundColor: paleta.primaria,
     borderRadius: 22,
     paddingHorizontal: 18,
     flexDirection: 'row',

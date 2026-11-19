@@ -1,4 +1,4 @@
-// Ícones de traço do design "Manhã Clara" (mesmos caminhos SVG das telas de referência).
+// Ícones de traço do app da família que não estão em @cuida/visual (traço 2,1 px, como na Variação E).
 // Iguais aos do app do idoso, mais os da navegação da família.
 // Decorativos: escondidos dos leitores de tela; o rótulo fica no botão.
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
@@ -9,7 +9,7 @@ interface Props {
   traco?: number;
 }
 
-function Base({ tamanho = 24, cor = '#18181C', traco = 2, children }: Props & { children: React.ReactNode }) {
+function Base({ tamanho = 24, cor = '#1C2321', traco = 2.1, children }: Props & { children: React.ReactNode }) {
   return (
     <Svg
       width={tamanho}
