@@ -1,5 +1,5 @@
 // Vitrine da Variação E: mostra todos os componentes base (só para conferência).
-// Os dois apps a expõem em /vitrine; nenhuma tela aponta para cá.
+// Os dois apps a expõem em /vitrine (só para conferência); nenhuma tela aponta para cá.
 import { BotaoPrincipal, BotaoSecundario } from './componentes/botao.tsx';
 import { BarraAbas } from './componentes/barra-abas.tsx';
 import { Campo } from './componentes/campo.tsx';
@@ -70,7 +70,7 @@ export function Vitrine() {
           Vitrine da Variação E
         </Text>
         <Corpo cor={cores.textoSuave}>
-          Página só para conferência. Mostra os componentes base de docs/design.md; nenhuma tela do app usa isto ainda.
+          Página só para conferência do visual. Mostra os componentes base de docs/design.md, os mesmos usados nas telas dos dois apps.
         </Corpo>
 
         <Secao titulo="Cores">
