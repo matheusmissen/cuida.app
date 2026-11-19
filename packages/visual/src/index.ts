@@ -9,4 +9,5 @@ export * from './componentes/icones.tsx';
 export * from './componentes/barra-abas.tsx';
 export * from './componentes/rostinho.tsx';
 export * from './componentes/paisagem.tsx';
+export * from './componentes/comprimido.tsx';
 export { Vitrine } from './vitrine.tsx';

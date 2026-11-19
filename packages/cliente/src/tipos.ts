@@ -39,10 +39,14 @@ export interface Remedio {
   paciente_id: string;
   nome: string;
   dose: string;
+  /** Caminho da foto da caixa no bucket privado `remedios` (<paciente_id>/<arquivo>). */
   foto_url: string | null;
   critico: boolean;
   estoque_doses: number | null;
   ativo: boolean;
+  /** Cor e formato do comprimido: códigos de comprimido.ts. */
+  cor?: string | null;
+  formato?: string | null;
 }
 
 export interface Horario {
@@ -62,7 +66,7 @@ export interface DoseComRemedio {
   confirmado_em: string | null;
   realarmado_em: string | null;
   status: StatusDose;
-  horarios: { remedios: Pick<Remedio, 'id' | 'nome' | 'dose' | 'foto_url' | 'critico'> };
+  horarios: { remedios: Pick<Remedio, 'id' | 'nome' | 'dose' | 'foto_url' | 'critico' | 'cor' | 'formato'> };
 }
 
 export interface AlertaLinha {
@@ -88,7 +92,7 @@ export const SELECT_ALERTA = 'id, paciente_id, gatilho, nivel, motivo, criado_em
 
 /** Select do PostgREST que traz o remédio junto com a dose. */
 export const SELECT_DOSE =
-  'id, horario_id, paciente_id, previsto_em, confirmado_em, realarmado_em, status, horarios!inner(remedios!inner(id, nome, dose, foto_url, critico))';
+  'id, horario_id, paciente_id, previsto_em, confirmado_em, realarmado_em, status, horarios!inner(remedios!inner(id, nome, dose, foto_url, critico, cor, formato))';
 
 /** Linha de `checkins` (a migration é a fonte da verdade). */
 export interface CheckinLinha {

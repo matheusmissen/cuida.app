@@ -14,3 +14,4 @@ export * from './grupo.ts';
 export * from './instalacao.ts';
 export * from './rostinho.ts';
 export * from './consentimento.ts';
+export * from './comprimido.ts';

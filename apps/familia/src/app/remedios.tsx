@@ -1,11 +1,14 @@
-import { horaDoBanco, lerHora, podeMudarRemedios, type Horario, type Remedio } from '@cuida/cliente';
+import { descricaoDoComprimido, horaDoBanco, lerHora, podeMudarRemedios, type Horario, type Remedio } from '@cuida/cliente';
+import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { APARENCIA_VAZIA, EscolhaAparencia, type Aparencia } from '@/components/aparencia-remedio';
 import { BarraNavegacao, ESPACO_BARRA } from '@/components/navegacao';
 import { Opcao } from '@/components/cadastro-paciente';
 import { Botao, Campo, Cartao, cores, Erro, Selo, Texto, Titulo, TituloPagina } from '@/components/ui';
 import { usePaciente } from '@/lib/paciente';
+import { apagarFotoRemedio, enviarFotoRemedio, useFotoRemedio } from '@/lib/remedios';
 import { supabase } from '@/lib/supabase';
 import { fontes, paleta } from '@/lib/tema';
 
@@ -87,8 +90,10 @@ export default function Remedios() {
               ? ` (${r.horarios[0].dias_semana.map((d) => DIAS_NOME[d]).join(', ')})`
               : ' (todos os dias)'}
           </Texto>
+          <ResumoAparencia remedio={r} />
           {r.estoque_doses !== null && <Texto suave>Estoque: {r.estoque_doses} doses</Texto>}
           {!r.ativo && <Texto suave>Suspenso — não toca alarme.</Texto>}
+          {podeEditar && <EditarAparencia remedio={r} pacienteId={paciente.id} aoSalvar={carregar} />}
           {podeEditar && (
             <Botao
               variante={r.ativo ? 'perigo' : 'secundario'}
@@ -111,6 +116,7 @@ function NovoRemedio({ pacienteId, aoSalvar }: { pacienteId: string; aoSalvar: (
   const [estoque, setEstoque] = useState('');
   const [critico, setCritico] = useState(false);
   const [dias, setDias] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
+  const [aparencia, setAparencia] = useState<Aparencia>(APARENCIA_VAZIA);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -127,12 +133,31 @@ function NovoRemedio({ pacienteId, aoSalvar }: { pacienteId: string; aoSalvar: (
       return setErro('Estoque deve ser um número inteiro de doses.');
     }
     setEnviando(true);
+    let fotoUrl: string | null = null;
+    if (aparencia.fotoNova) {
+      const r = await enviarFotoRemedio(pacienteId, aparencia.fotoNova);
+      if ('erro' in r) {
+        setEnviando(false);
+        return setErro(r.erro);
+      }
+      fotoUrl = r.caminho;
+    }
     const { data: remedio, error } = await supabase
       .from('remedios')
-      .insert({ paciente_id: pacienteId, nome: nome.trim(), dose: dose.trim(), critico, estoque_doses: estoqueNum })
+      .insert({
+        paciente_id: pacienteId,
+        nome: nome.trim(),
+        dose: dose.trim(),
+        critico,
+        estoque_doses: estoqueNum,
+        cor: aparencia.cor,
+        formato: aparencia.formato,
+        foto_url: fotoUrl,
+      })
       .select('id')
       .single();
     if (error || !remedio) {
+      await apagarFotoRemedio(fotoUrl);
       setEnviando(false);
       return setErro(error?.message ?? 'Não foi possível salvar.');
     }
@@ -153,6 +178,7 @@ function NovoRemedio({ pacienteId, aoSalvar }: { pacienteId: string; aoSalvar: (
     setEstoque('');
     setCritico(false);
     setDias([0, 1, 2, 3, 4, 5, 6]);
+    setAparencia(APARENCIA_VAZIA);
     aoSalvar();
   }
 
@@ -183,8 +209,11 @@ function NovoRemedio({ pacienteId, aoSalvar }: { pacienteId: string; aoSalvar: (
         </View>
       </View>
       <Campo rotulo="Estoque (doses, opcional)" value={estoque} onChangeText={setEstoque} keyboardType="number-pad" />
+      <Titulo>Como é o remédio</Titulo>
+      <Texto suave>Aparece na hora do remédio, para ajudar a reconhecer o que tomar.</Texto>
+      <EscolhaAparencia valor={aparencia} aoMudar={setAparencia} aoErro={setErro} />
       <Opcao marcada={critico} onPress={() => setCritico(!critico)}>
-        Remédio crítico (dose perdida avisa todo o círculo na hora)
+        Remédio crítico (aparece em destaque para a família)
       </Opcao>
       <Erro mensagem={erro} />
       <Botao titulo="Adicionar remédio" onPress={salvar} carregando={enviando} />
@@ -192,7 +221,84 @@ function NovoRemedio({ pacienteId, aoSalvar }: { pacienteId: string; aoSalvar: (
   );
 }
 
+function ResumoAparencia({ remedio }: { remedio: RemedioComHorarios }) {
+  const foto = useFotoRemedio(remedio.foto_url);
+  const descricao = descricaoDoComprimido(remedio.cor, remedio.formato);
+  if (!foto && !descricao) return null;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      {foto ? <Image source={{ uri: foto }} style={estilos.miniatura} contentFit="cover" accessibilityLabel="Foto da caixa" /> : null}
+      {descricao ? <Texto suave>{descricao}</Texto> : null}
+    </View>
+  );
+}
+
+/** Cor, formato e foto de um remédio que já existe (só o responsável). */
+function EditarAparencia({
+  remedio,
+  pacienteId,
+  aoSalvar,
+}: {
+  remedio: RemedioComHorarios;
+  pacienteId: string;
+  aoSalvar: () => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [valor, setValor] = useState<Aparencia>({ cor: remedio.cor ?? null, formato: remedio.formato ?? null, fotoNova: null });
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  if (!aberto) {
+    return (
+      <Botao
+        variante="secundario"
+        titulo="Cor, formato e foto da caixa"
+        onPress={() => {
+          setValor({ cor: remedio.cor ?? null, formato: remedio.formato ?? null, fotoNova: null });
+          setErro(null);
+          setAberto(true);
+        }}
+      />
+    );
+  }
+
+  async function salvar() {
+    setErro(null);
+    setSalvando(true);
+    let fotoUrl = remedio.foto_url;
+    if (valor.fotoNova) {
+      const r = await enviarFotoRemedio(pacienteId, valor.fotoNova);
+      if ('erro' in r) {
+        setSalvando(false);
+        return setErro(r.erro);
+      }
+      fotoUrl = r.caminho;
+    }
+    const { error } = await supabase
+      .from('remedios')
+      .update({ cor: valor.cor, formato: valor.formato, foto_url: fotoUrl })
+      .eq('id', remedio.id);
+    setSalvando(false);
+    if (error) {
+      if (fotoUrl !== remedio.foto_url) await apagarFotoRemedio(fotoUrl);
+      return setErro('Não foi possível salvar. Tente de novo.');
+    }
+    if (fotoUrl !== remedio.foto_url) await apagarFotoRemedio(remedio.foto_url);
+    setAberto(false);
+    aoSalvar();
+  }
+
+  return (
+    <View style={{ gap: 10 }}>
+      <EscolhaAparencia valor={valor} aoMudar={setValor} fotoAtual={remedio.foto_url} erro={erro} aoErro={setErro} />
+      <Botao titulo="Salvar" onPress={salvar} carregando={salvando} />
+      <Botao variante="texto" titulo="Cancelar" onPress={() => setAberto(false)} />
+    </View>
+  );
+}
+
 const estilos = StyleSheet.create({
+  miniatura: { width: 44, height: 44, borderRadius: 12 },
   conteudo: { padding: 20, paddingTop: 24, gap: 12, maxWidth: 640, width: '100%', alignSelf: 'center', paddingBottom: ESPACO_BARRA + 24 },
   rotulo: { fontSize: 14, fontFamily: fontes.textoNegrito, color: cores.secundario },
   dia: {
