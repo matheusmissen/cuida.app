@@ -1,4 +1,4 @@
-// Adicionar documento (referência: docs/design/telas/Familia-Adicionar.dc.html).
+// Adicionar documento (visual da Variação E, docs/design.md).
 // Foto pela câmera ou arquivo/PDF → bucket "documentos" em <paciente_id>/<arquivo> → linha em documentos.
 // Receita segue para "Confira a receita"; exame e relatório só ficam guardados.
 import { NOME_TIPO, tituloDoDocumento, type TipoDocumento } from '@cuida/cliente';
@@ -100,7 +100,7 @@ export default function Adicionar() {
                 accessibilityState={{ checked: marcado }}
                 accessibilityLabel={`${NOME_TIPO[t]}: ${descricao}`}
                 onPress={() => setTipo(t)}
-                style={[estilos.opcao, marcado && { borderColor: paleta.tinta }]}
+                style={[estilos.opcao, marcado && { borderColor: paleta.primaria }]}
               >
                 <View style={[estilos.iconeOpcao, { backgroundColor: fundo }]}>
                   <Icone tamanho={24} cor={cor} />
@@ -196,7 +196,7 @@ const estilos = StyleSheet.create({
   iconeOpcao: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   nomeOpcao: { fontFamily: fontes.textoNegrito, fontSize: 17, color: paleta.tinta },
   descricao: { fontFamily: fontes.texto, fontSize: 14, color: paleta.textoSuave },
-  marcado: { width: 26, height: 26, borderRadius: 13, backgroundColor: paleta.tinta, alignItems: 'center', justifyContent: 'center' },
+  marcado: { width: 26, height: 26, borderRadius: 13, backgroundColor: paleta.primaria, alignItems: 'center', justifyContent: 'center' },
   desmarcado: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: paleta.salvia.borda },
   enviando: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 60 },
   rodape: { fontFamily: fontes.texto, fontSize: 13, lineHeight: 18, color: paleta.textoSuave, textAlign: 'center' },

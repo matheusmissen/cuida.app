@@ -95,7 +95,7 @@ supabase/
 
 ```bash
 npm install
-npm test            # 259 testes: motor de regras, lógica dos apps e das Edge Functions
+npm test            # 271 testes: motor de regras, lógica dos apps e das Edge Functions
 npm run typecheck   # tipos dos dois apps e das Edge Functions
 ```
 
