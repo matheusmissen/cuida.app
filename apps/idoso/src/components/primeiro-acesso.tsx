@@ -3,7 +3,7 @@
 // (passado por telefone ou pessoalmente). Sem senha: depois disso, fica conectado.
 import { lerCodigoDeAcesso } from '@cuida/cliente';
 import { BotaoPrincipal, cores, espacos, fontes, Paisagem, paisagem, usePeriodo } from '@cuida/visual';
-import { useRef, useState } from 'react';
+import { useRef, useState, type ComponentRef } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View, type TextStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAparelho } from '@/lib/aparelho';
@@ -15,7 +15,7 @@ export function PrimeiroAcesso() {
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [focado, setFocado] = useState(false);
-  const campo = useRef<TextInput>(null);
+  const campo = useRef<ComponentRef<typeof TextInput>>(null);
 
   async function entrar() {
     const lido = lerCodigoDeAcesso(codigo);
@@ -121,7 +121,7 @@ const estilos = StyleSheet.create({
   // Tracinho vazio: mostra que falta um número sem parecer um número já digitado.
   traco: { width: 24, height: 4, borderRadius: 2, backgroundColor: cores.textoSuave },
   campoInvisivel: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: 0,
     color: 'transparent',
     fontSize: 16, // 16 ou mais: o Safari do iPhone não dá zoom ao focar
