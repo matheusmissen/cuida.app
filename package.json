@@ -1,6 +1,7 @@
 {
   "name": "cuida-app",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "description": "Assistente de voz que cuida do idoso que mora sozinho e avisa a família quando algo sai do normal.",
   "workspaces": [

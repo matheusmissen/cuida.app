@@ -174,3 +174,7 @@ O microfone na web exige HTTPS, que a Vercel já fornece. O Chrome, o Edge e o S
 - **Row Level Security** em todas as tabelas. Documentos ficam num Storage privado, visível só ao grupo de cuidado.
 - **Apagar a conta:** o familiar apaga a própria conta em Ajustes. Se for a única pessoa no grupo, os dados de quem ele cuida também são apagados; se não, a responsabilidade passa para a próxima pessoa do grupo.
 - **Guardamos só o necessário:** sem CPF, endereço ou plano de saúde. Sem venda ou compartilhamento comercial de dados de saúde.
+
+## Licença
+
+Código aberto sob a licença [MIT](LICENSE). Os dados da demonstração, dos testes e do vídeo são fictícios.
