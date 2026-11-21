@@ -74,6 +74,7 @@ O Cuida é um **web app instalável (PWA)**. Roda no navegador do celular e vai 
 
 - **Quem decide o alerta é código, nunca o LLM.** A IA só transforma a fala em dados estruturados. Se a IA cair, os alarmes, o botão de ajuda, o check-in com rostinhos e os alertas por silêncio continuam funcionando.
 - **Rede de segurança na fala:** palavras-chave ("tô quentinha", "caí", "falta de ar") são lidas junto com o LLM, e o sinal mais grave vence. As respostas da Lia passam por uma revisão que bloqueia diagnóstico, "não é nada", mudança de remédio e pedido de senha.
+- **Limite diário de uso da IA:** 60 mensagens para a Lia por celular e 10 leituras de documento por conta, por dia. Passou do limite, a Lia dá uma resposta fixa, mas a rede de palavras-chave, os alarmes e o "Preciso de ajuda" continuam funcionando.
 - **Segredos só no servidor** (segredos das Edge Functions e Vault). Os apps usam apenas a chave anon do Supabase.
 
 ### Estrutura do repositório
@@ -98,7 +99,7 @@ supabase/
 
 ```bash
 npm install
-npm test            # 284 testes: motor de regras, lógica dos apps e das Edge Functions
+npm test            # 289 testes: motor de regras, lógica dos apps e das Edge Functions
 npm run typecheck   # tipos dos dois apps e das Edge Functions
 ```
 
