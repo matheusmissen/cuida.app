@@ -18,6 +18,7 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { avaliarCheckin, avaliarNaoEntendeu, pedidoDeAjuda, type Alerta, type Checkin } from '../../../packages/regras/src/index.ts';
 import { criarEAvisar } from '../_shared/alertar.ts';
+import { podeUsarIa, respostaDoLimite } from '../_shared/limites.ts';
 import { contarNaoEntendeu } from './entendimento.ts';
 import { FERRAMENTAS } from './ferramentas.ts';
 import { deLinha, paraLinha, type LinhaCheckin } from './mapeamento.ts';
@@ -136,7 +137,11 @@ Deno.serve(async (req) => {
   let checkinRegistrado = false;
   let resposta = '';
 
-  try {
+  // Limite diário de uso da IA (_shared/limites.ts): passou, a Lia responde uma frase fixa e a rede de
+  // segurança abaixo continua registrando sinais de alerta e avisando a família.
+  const comIa = await podeUsarIa(db, usuario.user.id, 'conversa');
+  if (!comIa) resposta = respostaDoLimite(apelido);
+  else try {
     const [{ data: memoria }, doses] = await Promise.all([
       db.from('memoria_paciente').select('chave, valor').eq('paciente_id', paciente.id),
       dosesDeHoje(db, paciente.id),
@@ -239,7 +244,7 @@ Deno.serve(async (req) => {
       notas: 'Registrado automaticamente pela rede de segurança.',
     });
     alertasGerados.push(...novos);
-    if (novos.length > 0 && resposta === FALHA_IA) {
+    if (novos.length > 0 && (resposta === FALHA_IA || !comIa)) {
       resposta = 'Entendi que a senhora não está bem. Já avisei a sua família, tá bom?';
     }
   }

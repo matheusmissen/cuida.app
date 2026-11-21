@@ -7,11 +7,13 @@
 //
 // Entrada: POST { documento_id } com o token de um cuidador do paciente.
 // Saída:   receita { status, itens, alarmes }; pedido { status, pedido }; ou { erro }.
+// Limite: LIMITE_LEITURAS_DIA leituras por conta por dia (_shared/limites.ts, contar_uso_ia).
 // Segredos: LLM_API_KEY. Opcional: LLM_MODEL_VISAO (padrão claude-sonnet-5-5, melhor para letra de médico).
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { contarAlarmes, FERRAMENTA_LEITURA, INSTRUCOES_LEITURA, normalizarLeitura } from '../_shared/receita.ts';
 import { FERRAMENTA_PEDIDO, hojeEmBrasilia, INSTRUCOES_PEDIDO, normalizarPedido } from '../_shared/pedido.ts';
+import { ERRO_LIMITE_LEITURA, podeUsarIa } from '../_shared/limites.ts';
 
 const MODELO = Deno.env.get('LLM_MODEL_VISAO') ?? 'claude-sonnet-5-5';
 const TAMANHO_MAXIMO = 5 * 1024 * 1024; // limite de imagem da API
@@ -65,6 +67,12 @@ Deno.serve(async (req) => {
   const db = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
   const marcar = (status: string, leitura?: unknown) =>
     db.from('documentos').update(leitura === undefined ? { status } : { status, leitura }).eq('id', doc.id);
+
+  // Limite diário de leituras por conta (_shared/limites.ts). A família ainda pode cadastrar à mão.
+  if (!(await podeUsarIa(db, usuario.user.id, 'leitura'))) {
+    await marcar('erro');
+    return json({ erro: ERRO_LIMITE_LEITURA }, 429);
+  }
 
   await marcar('lendo');
   try {
