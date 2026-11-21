@@ -44,7 +44,7 @@ O objetivo do MVP é provar que **o idoso usa sozinho e a família fica sabendo 
 
 - Português do Brasil. Letra mínima de 20, alto contraste, botões de no mínimo 64 px.
 - Nenhum menu, nenhuma configuração, nenhum gesto de deslizar (a exceção é "Minha privacidade", exigida pela LGPD). Tudo o mais é configurado pelo app da família.
-- Toda resposta da Lia sai em voz e em texto grande.
+- Toda resposta da Lia sai em voz e em texto grande. A voz é sempre de português do Brasil, de preferência feminina e natural (`escolherVozDaLia` em `packages/cliente/src/voz.ts`, usada por `apps/idoso/src/lib/voz.ts`); nunca a de Portugal.
 
 ## Regras de alerta
 
