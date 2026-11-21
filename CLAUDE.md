@@ -92,6 +92,7 @@ O objetivo do MVP é provar que **o idoso usa sozinho e a família fica sabendo 
 ## Demonstração
 
 - Conta dos jurados: `jurados@example.com` (senha só no formulário de envio). `supabase/demo/preparar_demo.sql` apaga e recria a "Dona Maria" dessa conta (remédios, uma semana de histórico, uma consulta, modo demonstração, celular desconectado), põe a acompanhante fictícia "Bruna (neta)" (`bruna.demo@example.com`, sem senha) no grupo, registra as permissões da Dona Maria (`v_ja_consentiu`) e o aceite dos termos. Ao trocar `VERSAO_TERMOS`, troque `v_versao_termos` no script. Rode antes de gravar e antes da avaliação: sem celular conectado, cada remédio vencido vira um alerta.
+- **Página para os jurados:** https://cuida-app-familia.vercel.app/demo (`apps/familia/public/demo.html`, rewrite `/demo` em `apps/familia/vercel.json`): os dois apps lado a lado em iframes, com o roteiro; no celular, abas. Não muda os apps nem o banco. O app do idoso não pede para instalar quando está dentro dela (`dentroDeOutraPagina` em `apps/idoso/src/lib/instalacao.ts`); o `sw.js` não guarda `/demo` como página inicial.
 - Roteiro do vídeo e passo a passo dos jurados: `docs/demo.md`. Antes de gravar, desligue ou mantenha o modo demonstração de propósito.
 
 ## Regras do Hack Brasil (obrigatórias)
