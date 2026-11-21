@@ -63,6 +63,7 @@ O objetivo do MVP é provar que **o idoso usa sozinho e a família fica sabendo 
 - Camadas: o LLM extrai sintomas; a rede de palavras-chave (`agente/sinais.ts`) é mesclada e o mais grave vence; com sinal de alerta e sem registro do LLM (ou com o LLM fora do ar), o servidor registra sozinho; toda resposta passa por `agente/revisao.ts`.
 - Limites (no prompt e cobertos por testes): nunca diagnostica nem sugere mudar, parar ou começar remédio; nunca diz que um sintoma "não é nada"; nunca pede senha, dados bancários ou códigos; frases curtas, uma pergunta por vez, tom carinhoso; entende "tô quentinha" = possível febre e "meio caída" = cansaço/humor baixo.
 - Sem o consentimento "conversar com a Lia", devolve uma resposta fixa e não chama o LLM.
+- **Limite diário de IA** (`_shared/limites.ts`, tabela `uso_ia`, `contar_uso_ia` só para o servidor): 60 mensagens para a Lia por celular e 10 leituras de receita ou pedido por conta da família, por dia. Passou: a Lia responde uma frase fixa (a rede de segurança continua avisando a família) e a leitura volta "limite de leituras de hoje". Ao mudar `limites.ts`, publique `agente` e `ler-receita`.
 
 ## Como as partes funcionam (onde está cada coisa)
 
