@@ -12,12 +12,15 @@ Todos os dados são fictícios. "Dona Maria" não existe.
    - remédios às 8h, 12h e 20h;
    - uma semana de histórico;
    - modo demonstração ligado, com todos os tempos em 1 minuto;
+   - a Bruna (neta), acompanhante fictícia, no grupo;
+   - a Dona Maria já com as 3 permissões (para o alerta chegar à Bruna) e os termos aceitos na conta;
    - celular desconectado.
-3. Para mostrar a escalada para o grupo, convide uma segunda conta como acompanhante (Ajustes → Grupo de cuidado).
+
+   Se quiser mostrar a tela de consentimento no primeiro acesso, troque `v_ja_consentiu` para `false` no início do script. Aí o alerta só chega à Bruna depois que a Dona Maria concordar com "mostrar para a família".
+3. Rode o script de novo perto da avaliação: sem celular conectado, cada remédio vencido vira um alerta, e eles se acumulam.
 4. Antes de rodar, cadastre um remédio para daqui a 2 ou 3 minutos (Remédios → Adicionar), para o alarme tocar durante a gravação.
 5. Use duas telas: o app da família num navegador e o app do idoso em outro (ou no celular, instalado).
-6. Entre uma vez com a conta de demonstração e aceite os termos (versão de 20/11, com "Apagar sua conta"), para os jurados não pararem nessa tela.
-7. Para a cena do pedido médico, tenha à mão um papel fictício, por exemplo: "Retorno com Dra. Ana, hematologia, em 30 dias. Levar hemograma."
+6. Para a cena do pedido médico, tenha à mão um papel fictício, por exemplo: "Retorno com Dra. Ana, hematologia, em 30 dias. Levar hemograma."
 
 ## Roteiro do vídeo (até 3 minutos)
 
@@ -37,6 +40,8 @@ Todos os dados são fictícios. "Dona Maria" não existe.
 1. No app da família, entre com a conta de demonstração (os dados de acesso vão no formulário de envio).
 2. Toque em "Conectar o celular" e depois em "Mostrar o código".
 3. Abra o app do idoso em outra aba, ou no celular, e digite o código.
+Sem conectar nenhum celular, dá para ver o fluxo principal: quando um remédio vence sem "Tomei", o Lucas (a conta de demonstração) recebe o alerta laranja em até 1 minuto; se ninguém agir, 1 minuto depois o alerta sobe para o grupo e a tela do alerta mostra "Bruna (neta) · avisada às …".
+
 4. Faça o check-in, converse com a Lia e espere o próximo remédio. Os alertas chegam no painel da família em até 1 minuto.
 5. No alarme, "Lembrar em 10 minutos" faz o lembrete voltar como notificação, mesmo com o app fechado (se as notificações estiverem ligadas). A família continua sendo avisada no tempo normal: adiar não é tomar.
 6. Em Arquivos, envie uma receita ou um pedido médico (foto ou PDF fictício). A Lia só sugere; nada vira alarme ou consulta sem a família conferir.
