@@ -8,7 +8,7 @@
 // - Nunca guarda chamadas a outros sites (Supabase, API da Lia): dados de saúde não ficam no cache.
 // - Mostra as notificações (web push) mandadas pelo servidor e abre o app ao tocar nelas.
 
-const VERSAO = 'cuida-v2';
+const VERSAO = 'cuida-v3';
 const CASCA = ['/', '/manifest.webmanifest', '/icones/icone-192.png', '/icones/icone-512.png'];
 
 self.addEventListener('install', (evento) => {
@@ -44,7 +44,8 @@ self.addEventListener('fetch', (evento) => {
       fetch(pedido)
         .then((resposta) => {
           const copia = resposta.clone();
-          if (resposta.ok) caches.open(VERSAO).then((cache) => cache.put('/', copia));
+          // Guarda só o app como página inicial para abrir sem internet (a página /demo não).
+          if (resposta.ok && !url.pathname.startsWith('/demo')) caches.open(VERSAO).then((cache) => cache.put('/', copia));
           return resposta;
         })
         .catch(() => caches.match('/').then((r) => r || Response.error())),

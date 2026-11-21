@@ -2,6 +2,7 @@
 
 Todos os dados são fictícios. "Dona Maria" não existe.
 
+- **Os dois apps lado a lado, com o roteiro (página para os jurados): https://cuida-app-familia.vercel.app/demo**
 - App da família: https://cuida-app-familia.vercel.app
 - App do idoso: https://cuida-app-idoso.vercel.app
 
@@ -37,7 +38,7 @@ Todos os dados são fictícios. "Dona Maria" não existe.
 
 ## Para os jurados
 
-1. No app da família, entre com a conta de demonstração (os dados de acesso vão no formulário de envio).
+1. Abra https://cuida-app-familia.vercel.app/demo: os dois apps aparecem lado a lado, com este roteiro ao lado (no celular, um de cada vez, com abas). No app da família, entre com a conta de demonstração (os dados de acesso vão no formulário de envio).
 2. Toque em "Conectar o celular" e depois em "Mostrar o código".
 3. Abra o app do idoso em outra aba, ou no celular, e digite o código.
 Sem conectar nenhum celular, dá para ver o fluxo principal: quando um remédio vence sem "Tomei", o Lucas (a conta de demonstração) recebe o alerta laranja em até 1 minuto; se ninguém agir, 1 minuto depois o alerta sobe para o grupo e a tela do alerta mostra "Bruna (neta) · avisada às …".

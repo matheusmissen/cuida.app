@@ -1,0 +1,317 @@
+<!doctype html>
+<!--
+  Página de demonstração para os jurados: os dois apps do Cuida lado a lado, no navegador, sem instalar nada.
+  Endereço: https://cuida-app-familia.vercel.app/demo (rewrite em apps/familia/vercel.json).
+  Não muda nada nos apps nem no banco: só mostra os dois sites dentro desta página, com o roteiro ao lado.
+  Cores e fontes da Variação E (docs/design.md). No celular, mostra um app por vez, com abas.
+  Para testar com outro endereço do app do idoso: /demo?idoso=http://localhost:8082
+-->
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cuida · Demonstração</title>
+    <meta name="description" content="Os dois apps do Cuida lado a lado, com dados fictícios, para testar no navegador." />
+    <link rel="icon" href="/icones/icone-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@800&family=Atkinson+Hyperlegible:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --fundo: #fbf8f3;
+        --superficie: #ffffff;
+        --borda: #ddd5c8;
+        --texto: #1c2321;
+        --suave: #3e4744;
+        --primaria: #0f5e5a;
+        --primaria-escura: #0a4441;
+        --menta: #e3f2ec;
+        --menta-borda: #bfdccd;
+        --pessego: #fcebdd;
+        --pessego-borda: #f0cbae;
+        --pessego-icone: #7a3a10;
+        --alerta-texto: #5a2306;
+      }
+      * { box-sizing: border-box; margin: 0; }
+      html, body { height: 100%; }
+      body {
+        background: linear-gradient(135deg, #fff3d4 0%, var(--fundo) 45%, var(--menta) 100%);
+        color: var(--texto);
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 16px;
+        line-height: 1.45;
+      }
+      a { color: var(--primaria); font-weight: 700; }
+      .pagina {
+        min-height: 100%;
+        display: grid;
+        grid-template-columns: minmax(300px, 420px) auto;
+        gap: 32px;
+        align-items: start;
+        justify-content: center;
+        padding: 16px 24px;
+      }
+      /* Os celulares ficam parados no topo enquanto o roteiro rola. */
+      .celulares { position: sticky; top: 16px; }
+      .marca { display: flex; align-items: center; gap: 12px; font-family: Nunito, sans-serif; font-size: 34px; }
+      .marca svg { width: 42px; height: 42px; }
+      .cap { font-family: Nunito, sans-serif; color: var(--primaria); letter-spacing: 1px; text-transform: uppercase; font-size: 14px; margin-top: 6px; }
+      h1 { font-family: Nunito, sans-serif; font-size: 28px; line-height: 1.15; margin: 10px 0 8px; }
+      .aviso {
+        background: var(--pessego);
+        border: 1.5px solid var(--pessego-borda);
+        color: var(--alerta-texto);
+        border-radius: 18px;
+        padding: 10px 14px;
+        font-size: 15px;
+        margin: 12px 0;
+      }
+      .conta {
+        background: var(--superficie);
+        border: 1.5px solid var(--borda);
+        border-radius: 18px;
+        padding: 12px 14px;
+        font-size: 15px;
+      }
+      .conta code { font-family: inherit; font-weight: 700; color: var(--primaria-escura); }
+      ol.roteiro { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 8px; }
+      ol.roteiro li {
+        background: var(--superficie);
+        border: 1.5px solid var(--borda);
+        border-radius: 18px;
+        padding: 10px 12px 10px 48px;
+        position: relative;
+        font-size: 15px;
+      }
+      ol.roteiro li::before {
+        counter-increment: passo;
+        content: counter(passo);
+        position: absolute;
+        left: 12px;
+        top: 10px;
+        width: 26px;
+        height: 26px;
+        border-radius: 13px;
+        background: var(--primaria);
+        color: #fff;
+        font-family: Nunito, sans-serif;
+        font-size: 14px;
+        display: grid;
+        place-items: center;
+      }
+      ol.roteiro { counter-reset: passo; }
+      .onde { font-family: Nunito, sans-serif; font-size: 13px; padding: 2px 8px; border-radius: 999px; margin-right: 4px; white-space: nowrap; }
+      .onde.familia { background: var(--menta); color: var(--primaria-escura); border: 1px solid var(--menta-borda); }
+      .onde.idoso { background: var(--pessego); color: var(--pessego-icone); border: 1px solid var(--pessego-borda); }
+      .rodape { font-size: 13px; color: var(--suave); margin-top: 12px; }
+
+      .celulares { display: flex; gap: 28px; align-items: flex-start; }
+      .celular { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+      .rotulo { font-family: Nunito, sans-serif; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+      .rotulo i { width: 12px; height: 12px; border-radius: 6px; display: inline-block; }
+      .acoes { display: flex; gap: 8px; }
+      .acoes button, .acoes a {
+        font: 700 13px 'Atkinson Hyperlegible', sans-serif;
+        border: 1.5px solid var(--primaria);
+        color: var(--primaria);
+        background: var(--superficie);
+        border-radius: 999px;
+        padding: 4px 12px;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      /* A moldura tem o tamanho de um celular (390 × 844) e é reduzida para caber na altura da tela. */
+      .moldura-externa { width: calc(414px * var(--escala, 1)); height: calc(868px * var(--escala, 1)); }
+      .moldura {
+        width: 414px;
+        height: 868px;
+        border-radius: 52px;
+        background: var(--texto);
+        padding: 12px;
+        box-shadow: 0 24px 48px rgba(28, 35, 33, 0.22);
+        transform: scale(var(--escala, 1));
+        transform-origin: top left;
+      }
+      iframe { width: 390px; height: 844px; border: 0; border-radius: 40px; background: var(--fundo); display: block; }
+
+      .abas { display: none; }
+
+      /* Celular e tablet pequeno: um app por vez, em tela cheia, com abas no topo. */
+      @media (max-width: 1000px) {
+        .pagina { display: block; padding: 0; }
+        .lado { padding: 12px 16px 6px; }
+        .lado h1, .lado .cap, .lado .aviso { display: none; }
+        .marca { font-size: 26px; }
+        .marca svg { width: 32px; height: 32px; }
+        .conta { margin-top: 8px; padding: 8px 12px; font-size: 14px; }
+        .celulares { position: static; }
+        .lado details > summary { cursor: pointer; font-family: Nunito, sans-serif; font-size: 18px; margin-top: 8px; color: var(--primaria); }
+        .abas {
+          display: flex;
+          gap: 6px;
+          position: sticky;
+          top: 0;
+          z-index: 2;
+          background: var(--superficie);
+          border-bottom: 1.5px solid var(--borda);
+          padding: 8px 16px;
+        }
+        .abas button {
+          flex: 1;
+          min-height: 48px;
+          border-radius: 999px;
+          border: 0;
+          background: transparent;
+          font: 800 16px Nunito, sans-serif;
+          color: var(--suave);
+          cursor: pointer;
+        }
+        .abas button[aria-selected='true'] { background: var(--primaria); color: #fff; }
+        .celulares { display: block; }
+        .celular { display: none; gap: 0; }
+        .celular.ativo { display: block; }
+        .celular .rotulo, .celular .acoes { display: none; }
+        .moldura-externa { width: 100%; height: calc(100vh - 66px); height: calc(100dvh - 66px); }
+        .moldura { width: 100%; height: 100%; border-radius: 0; padding: 0; box-shadow: none; transform: none; background: var(--fundo); }
+        iframe { width: 100%; height: 100%; border-radius: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="pagina">
+      <section class="lado" aria-label="Como usar a demonstração">
+        <div class="marca">
+          <svg viewBox="0 0 48 48" aria-hidden="true">
+            <ellipse cx="17" cy="20" rx="9" ry="14" fill="#E8875A" transform="rotate(-25 17 20)" />
+            <ellipse cx="31" cy="20" rx="9" ry="14" fill="#7C6BD6" transform="rotate(25 31 20)" />
+            <ellipse cx="24" cy="30" rx="9" ry="14" fill="#0F5E5A" />
+          </svg>
+          Cuida
+        </div>
+        <div class="cap">Demonstração para os jurados</div>
+        <h1>Os dois apps, lado a lado, sem instalar nada</h1>
+        <div class="aviso">Todos os dados são fictícios. "Dona Maria" não existe.</div>
+        <div class="conta">
+          Entre no app da família com <code>jurados@example.com</code> e a senha do formulário de envio. Dados fictícios.
+        </div>
+        <details open id="roteiro">
+          <summary>Roteiro (cerca de 5 minutos)</summary>
+          <ol class="roteiro">
+            <li>
+              <span class="onde familia">Família</span> Entre com a conta acima. O painel da Dona Maria abre em
+              <b>modo demonstração</b>: todos os tempos em 1 minuto.
+            </li>
+            <li>
+              <span class="onde familia">Família</span> Sem fazer nada: quando um remédio vence (8h, 12h e 20h), o
+              Lucas recebe o <b>alerta laranja</b> em até 1 minuto. Um minuto depois, o alerta sobe para o grupo:
+              abra o alerta e veja <b>"Bruna (neta)"</b> em "Quem foi avisado".
+            </li>
+            <li>
+              <span class="onde familia">Família</span> Toque em <b>"Conectar o celular"</b> e depois em
+              <b>"Mostrar o código"</b>. <span class="onde idoso">Idoso</span> Digite os 4 números e toque em
+              "Entrar".
+            </li>
+            <li>
+              <span class="onde idoso">Idoso</span> Toque em "Começar". No check-in, toque em <b>"Mal"</b>, de novo
+              em "Mal" e em "Está certo". Diga ou escreva para a Lia: <b>"tô quentinha"</b>.
+              <span class="onde familia">Família</span> Chega o alerta vermelho de febre.
+            </li>
+            <li>
+              <span class="onde familia">Família</span> Em Remédios, cadastre um remédio para daqui a 2 minutos.
+              <span class="onde idoso">Idoso</span> O alarme aparece: toque em <b>"Tomei"</b> ou em "Lembrar em 10
+              minutos" (adiar não é tomar: a família continua sendo avisada).
+            </li>
+            <li>
+              <span class="onde idoso">Idoso</span> Toque em <b>"Preciso de ajuda"</b>: há 5 segundos para cancelar.
+              <span class="onde familia">Família</span> Todo o grupo recebe a emergência.
+            </li>
+            <li>
+              <span class="onde familia">Família</span> Em Arquivos, envie a foto de uma receita ou de um pedido
+              médico fictício. A Lia só sugere: nada vira alarme ou consulta sem a família conferir.
+            </li>
+            <li>
+              <span class="onde idoso">Idoso</span> No fim da tela, <b>"Minha privacidade"</b>: as permissões e quem
+              acompanha a Dona Maria.
+            </li>
+          </ol>
+          <p class="rodape">
+            No computador, o navegador pede o microfone para falar com a Lia; se preferir, escreva. Se outra
+            pessoa conectar o celular depois, o anterior é desconectado. Os apps também abrem sozinhos:
+            <a href="/" target="_blank" rel="noopener">família</a> ·
+            <a id="linkIdoso" href="https://cuida-app-idoso.vercel.app/" target="_blank" rel="noopener">idoso</a>.
+          </p>
+        </details>
+      </section>
+
+      <div class="abas" role="tablist" aria-label="Qual app mostrar">
+        <button role="tab" aria-selected="true" aria-controls="cel-familia" data-alvo="cel-familia">App da Família</button>
+        <button role="tab" aria-selected="false" aria-controls="cel-idoso" data-alvo="cel-idoso">App do Idoso</button>
+      </div>
+
+      <section class="celulares" aria-label="Os dois apps">
+        <div class="celular ativo" id="cel-familia" role="tabpanel">
+          <div class="rotulo"><i style="background: #0f5e5a"></i>App da Família</div>
+          <div class="moldura-externa">
+            <div class="moldura">
+              <iframe id="familia" title="App da Família" src="/" allow="clipboard-write"></iframe>
+            </div>
+          </div>
+          <div class="acoes">
+            <button type="button" data-recarregar="familia">Recarregar</button>
+            <a href="/" target="_blank" rel="noopener">Abrir em outra aba</a>
+          </div>
+        </div>
+        <div class="celular" id="cel-idoso" role="tabpanel">
+          <div class="rotulo"><i style="background: #e8875a"></i>App do Idoso</div>
+          <div class="moldura-externa">
+            <div class="moldura">
+              <iframe id="idoso" title="App do Idoso" allow="microphone; autoplay; clipboard-write"></iframe>
+            </div>
+          </div>
+          <div class="acoes">
+            <button type="button" data-recarregar="idoso">Recarregar</button>
+            <a id="abrirIdoso" href="https://cuida-app-idoso.vercel.app/" target="_blank" rel="noopener">Abrir em outra aba</a>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      // Endereço do app do idoso (pode trocar com ?idoso=... para testar em outro lugar).
+      const PADRAO = 'https://cuida-app-idoso.vercel.app/';
+      const pedido = new URLSearchParams(location.search).get('idoso');
+      const idosoUrl = pedido && /^https?:\/\//.test(pedido) ? pedido : PADRAO;
+      document.getElementById('idoso').src = idosoUrl;
+      document.getElementById('abrirIdoso').href = idosoUrl;
+      document.getElementById('linkIdoso').href = idosoUrl;
+
+      // No computador: reduz os celulares para caberem na altura da janela.
+      function ajustar() {
+        const espaco = window.innerHeight - 120;
+        const escala = Math.max(0.55, Math.min(1, espaco / 868));
+        document.documentElement.style.setProperty('--escala', String(escala));
+      }
+      addEventListener('resize', ajustar);
+      ajustar();
+
+      // No celular: abas para trocar entre os dois apps.
+      document.querySelectorAll('.abas button').forEach((botao) => {
+        botao.addEventListener('click', () => {
+          document.querySelectorAll('.abas button').forEach((b) => b.setAttribute('aria-selected', String(b === botao)));
+          document.querySelectorAll('.celular').forEach((c) => c.classList.toggle('ativo', c.id === botao.dataset.alvo));
+        });
+      });
+      if (matchMedia('(max-width: 1000px)').matches) document.getElementById('roteiro').removeAttribute('open');
+
+      document.querySelectorAll('[data-recarregar]').forEach((botao) => {
+        botao.addEventListener('click', () => {
+          const quadro = document.getElementById(botao.dataset.recarregar);
+          quadro.src = quadro.src;
+        });
+      });
+    </script>
+  </body>
+</html>

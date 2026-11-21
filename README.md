@@ -9,6 +9,7 @@ Projeto da trilha **Saúde e bem-estar** do Hack Brasil 2026.
 ## Links
 
 - **Demo web**, sem instalar nada:
+  - **os dois apps lado a lado, com o roteiro: https://cuida-app-familia.vercel.app/demo** (no celular, um app por vez, com abas)
   - app da família: https://cuida-app-familia.vercel.app
   - app do idoso: https://cuida-app-idoso.vercel.app
 - **Conta de demonstração** (app da família): `jurados@example.com`. A senha vai no formulário de envio do Hack Brasil.

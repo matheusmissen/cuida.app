@@ -49,6 +49,15 @@ export interface EstadoInstalacao {
   carregando: boolean;
 }
 
+/** Aberto dentro de outra página (a página de demonstração, /demo do app da família): não pede para instalar. */
+function dentroDeOutraPagina(): boolean {
+  try {
+    return typeof window !== 'undefined' && window.self !== window.top;
+  } catch {
+    return true; // o navegador não deixa ler a página de fora: é porque está dentro de uma
+  }
+}
+
 export function useInstalacao(): EstadoInstalacao {
   const g = globalThis as unknown as { navigator?: Navigator; matchMedia?: (c: string) => MediaQueryList };
   const navegador = reconhecerNavegador(g.navigator?.userAgent ?? '', g.navigator?.maxTouchPoints ?? 0);
@@ -90,7 +99,7 @@ export function useInstalacao(): EstadoInstalacao {
     navegador,
     instalado,
     acabouDeInstalar: instaladoAgora,
-    mostrarTela: Platform.OS === 'web' && precisaInstalar(navegador, instalado, dispensou),
+    mostrarTela: Platform.OS === 'web' && !dentroDeOutraPagina() && precisaInstalar(navegador, instalado, dispensou),
     temBotao: Boolean(pedido) && !navegador.dentroDeApp,
     instalar,
     dispensar,
